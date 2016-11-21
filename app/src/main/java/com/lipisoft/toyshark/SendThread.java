@@ -23,12 +23,13 @@ public class SendThread implements Runnable {
         FileInputStream in = new FileInputStream(mVPNInterface.getFileDescriptor());
         ByteBuffer packet = ByteBuffer.allocate(65535);
         int length;
+
         try {
             while ((length = in.read(packet.array())) >= 0) {
                 if (length > 0) {
                     // TODO extract header and send out
                     // check IP version
-                    // get source and destination address
+                    // get source's IP address and destination's one
                     // check whether TCP or UDP
                     // if TCP, check control flag (seq, fin, reset, etc) and port number
                     // else UDP, get source and destination port number

@@ -7,6 +7,9 @@ import android.util.Log;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.nio.channels.DatagramChannel;
+import java.nio.channels.SocketChannel;
+import java.util.List;
 
 /**
  * Created by Lipi on 16. 4. 7..
@@ -14,6 +17,8 @@ import java.io.FileOutputStream;
 public class ToySharkVPNService extends VpnService {
     private static final String TAG = "ToyShark";
     private ParcelFileDescriptor mVPNInterface;
+    List<SocketChannel> socketChannelList;
+    List<DatagramChannel> datagramChannelList;
 
     @Override
     public void onRevoke() {
