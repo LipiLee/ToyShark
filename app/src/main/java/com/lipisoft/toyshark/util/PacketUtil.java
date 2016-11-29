@@ -37,7 +37,7 @@ import com.lipisoft.toyshark.udp.UDPHeader;
  * Date: May 8, 2014
  */
 public class PacketUtil {
-	public static final String TAG = "AROCollector";
+	public static final String TAG = "PacketUtil";
 	private volatile static boolean enabledDebugLog = false;
 	private volatile static int packetid = 0;
 	public synchronized static int getPacketId(){

@@ -29,6 +29,7 @@ import com.lipisoft.toyshark.udp.UDPHeader;
 import com.lipisoft.toyshark.udp.UDPPacketFactory;
 import com.lipisoft.toyshark.util.PacketUtil;
 
+import android.os.Message;
 import android.util.Log;
 
 /**
@@ -36,7 +37,7 @@ import android.util.Log;
  * @author Borey Sao
  * Date: May 22, 2014
  */
-public class SessionHandler {
+class SessionHandler {
 	public static final String TAG = "AROCollector";
 	
 	private static Object synObject = new Object();
@@ -47,7 +48,7 @@ public class SessionHandler {
 	private UDPPacketFactory udpfactory;
 	private SocketData packetdata = null;
 
-	public static SessionHandler getInstance() throws IOException{
+	static SessionHandler getInstance() throws IOException{
 		if(handler == null){
 			synchronized (synObject){
 				if(handler == null){
@@ -65,7 +66,7 @@ public class SessionHandler {
 		packetdata = SocketData.getInstance();
 	}
 
-	public void setWriter(IClientPacketWriter writer){
+	void setWriter(IClientPacketWriter writer){
 		this.writer = writer;
 	}
 
@@ -207,7 +208,7 @@ public class SessionHandler {
 	 * @param length packet lenght
 	 * @throws PacketHeaderException
 	 */
-	public void handlePacket(byte[] data, int length) throws PacketHeaderException{
+	void handlePacket(byte[] data, int length) throws PacketHeaderException{
 		byte[] clientpacketdata = new byte[length];
 		System.arraycopy(data, 0, clientpacketdata, 0, length);
 		packetdata.addData(clientpacketdata);
@@ -220,14 +221,21 @@ public class SessionHandler {
 
 		UDPHeader udpheader = null;
 		TCPHeader tcpheader = null;
-		if(ipheader.getProtocol() == 6)
+		Packet packet = new Packet();
+		packet.setIpheader(ipheader);
+		if(ipheader.getProtocol() == 6) {
 			tcpheader = factory.createTCPHeader(clientpacketdata, ipheader.getIPHeaderLength());
-		else if(ipheader.getProtocol() == 17)
+			packet.setTcpheader(tcpheader);
+			packet.setBuffer(clientpacketdata);
+		} else if(ipheader.getProtocol() == 17)
 			udpheader = udpfactory.createUDPHeader(clientpacketdata, ipheader.getIPHeaderLength());
 		else {
 			Log.e(TAG, "******===> Unsupported protocol: " + ipheader.getProtocol());
 			return;
 		}
+
+		Message message = MainActivity.mHandler.obtainMessage(MainActivity.PACKET, packet);
+		message.sendToTarget();
 
         if(tcpheader != null){
         	handleTCPPacket(clientpacketdata, ipheader, tcpheader);

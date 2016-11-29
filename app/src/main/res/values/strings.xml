@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">ToyShark</string>
+    <string name="tcp">TCP</string>
+    <string name="udp">UDP</string>
+    <string name="quit">Quit</string>
+    <string name="try_again">Try again</string>
 </resources>

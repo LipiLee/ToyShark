@@ -21,11 +21,13 @@ import java.nio.ByteOrder;
 import java.util.Date;
 import java.util.Random;
 
+import com.lipisoft.toyshark.MainActivity;
 import com.lipisoft.toyshark.Packet;
 import com.lipisoft.toyshark.ip.IPPacketFactory;
 import com.lipisoft.toyshark.ip.IPv4Header;
 import com.lipisoft.toyshark.util.PacketUtil;
 
+import android.os.Message;
 import android.util.Log;
 
 /**
@@ -381,7 +383,14 @@ public class TCPPacketFactory {
 		
 		//write new checksum back to array
 		System.arraycopy(tcpchecksum, 0, buffer,tcpstart + 16, 2);
-		
+
+		Packet packet = new Packet();
+		packet.setIpheader(ipheader);
+		packet.setTcpheader(tcpheader);
+		packet.setBuffer(buffer);
+
+		Message message = MainActivity.mHandler.obtainMessage(MainActivity.PACKET, packet);
+		message.sendToTarget();
 		return buffer;
 	}
 	
