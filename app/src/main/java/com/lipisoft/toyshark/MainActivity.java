@@ -1,10 +1,12 @@
 package com.lipisoft.toyshark;
 
+import android.Manifest;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.VpnService;
@@ -13,6 +15,9 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Gravity;
@@ -32,6 +37,7 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
     private static String TAG = "MainActivity";
     public static final int PACKET = 0;
+    private static final int REQUEST_WRITE_EXTERNAL_STORAGE = 0;
     private Intent captureVpnServiceIntent;
     private BroadcastReceiver analyzerCloseCmdReceiver = null;
     public static Handler mHandler;
@@ -52,16 +58,27 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    void checkRuntimePermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                Log.d(TAG, "REQUEST_WRITE_EXTERNAL_STORAGE is needed.");
+            } else {
+                Log.d(TAG, "requestPermission");
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_WRITE_EXTERNAL_STORAGE);
+            }
+        }
+
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         Log.i(TAG, "onCreate(...)");
         super.onCreate(savedInstanceState);
         //setContentView(R.layout.splash);
         setContentView(R.layout.activity_main);
-
-        if (networkAndAirplaneModeCheck()) {
-            startVPN();
-        }
+        checkRuntimePermission();
 
         mHandler = new Handler(Looper.getMainLooper()) {
             @Override
@@ -77,6 +94,18 @@ public class MainActivity extends AppCompatActivity {
 
         tableLayout = (TableLayout) findViewById(R.id.tableLayout);
 
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        switch (requestCode) {
+            case REQUEST_WRITE_EXTERNAL_STORAGE:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    if (networkAndAirplaneModeCheck()) {
+                        startVPN();
+                    }
+                }
+        }
     }
 
     void updateTableLayout(Packet packet) {
@@ -97,24 +126,28 @@ public class MainActivity extends AppCompatActivity {
         numberTextView.setGravity(Gravity.END);
         numberTextView.setPadding(10, 0, 10, 0);
         numberTextView.setBackgroundColor(color);
+        numberTextView.setTextColor(0xFF000000);
         tableRow.addView(numberTextView);
 
         TextView timeTextView = new TextView(this);
         timeTextView.setPadding(10, 0, 10, 0);
         timeTextView.setText(DateFormat.getDateTimeInstance().format(new Date()));
         timeTextView.setBackgroundColor(color);
+        timeTextView.setTextColor(0xFF000000);
         tableRow.addView(timeTextView);
 
         TextView sourceTextView = new TextView(this);
         sourceTextView.setPadding(10, 0, 10, 0);
         sourceTextView.setText(PacketUtil.intToIPAddress(packet.getIpheader().getSourceIP()));
         sourceTextView.setBackgroundColor(color);
+        sourceTextView.setTextColor(0xFF000000);
         tableRow.addView(sourceTextView);
 
         TextView destinationTextView = new TextView(this);
         destinationTextView.setPadding(10, 0, 10, 0);
         destinationTextView.setText(PacketUtil.intToIPAddress(packet.getIpheader().getDestinationIP()));
         destinationTextView.setBackgroundColor(color);
+        destinationTextView.setTextColor(0xFF000000);
         tableRow.addView(destinationTextView);
 
         TextView protocolTextView = new TextView(this);
@@ -124,12 +157,14 @@ public class MainActivity extends AppCompatActivity {
         else
             protocolTextView.setText(R.string.udp);
         protocolTextView.setBackgroundColor(color);
+        protocolTextView.setTextColor(0xFF000000);
         tableRow.addView(protocolTextView);
 
         TextView lengthTextView = new TextView(this);
         lengthTextView.setPadding(10, 0, 10, 0);
         lengthTextView.setText(String.valueOf(packet.getBuffer().length));
         lengthTextView.setBackgroundColor(color);
+        lengthTextView.setTextColor(0xFF000000);
         tableRow.addView(lengthTextView);
 
         TextView infoTextView = new TextView(this);
@@ -138,6 +173,7 @@ public class MainActivity extends AppCompatActivity {
         if (info != null)
             infoTextView.setText(info);
         infoTextView.setBackgroundColor(color);
+        infoTextView.setTextColor(0xFF000000);
         tableRow.addView(infoTextView);
 
         tableLayout.addView(tableRow);
