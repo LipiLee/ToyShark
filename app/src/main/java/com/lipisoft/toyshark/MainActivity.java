@@ -30,38 +30,7 @@ import java.util.Date;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-//    private static final String TAG = "ToyShark";
-//    public static final int PACKET = 0;
-//    public static Handler mHandler;
-//
-//    @Override
-//    protected void onCreate(Bundle savedInstanceState) {
-//        super.onCreate(savedInstanceState);
-//        setContentView(R.layout.activity_main);
-//
-//        Log.v(TAG, "onCreate is called.");
-//        Intent intent = VpnService.prepare(this);
-//        if (intent != null)
-//            startActivityForResult(intent, 0);
-//        else
-//            onActivityResult(0, RESULT_OK, null);
-//
-//    }
-//
-//    @Override
-//    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-//        //super.onActivityResult(requestCode, resultCode, data);
-//        Log.v(TAG, "onActivityResult is called.");
-//        if (resultCode == RESULT_OK) {
-//            Intent intent = new Intent(this, ToySharkVPNService.class);
-//            startService(intent);
-//        } else
-//            // TODO Seriously alert popup to user
-//            ;
-//
-//    }
-
-    private static String TAG = "AroCollectorActivity";
+    private static String TAG = "MainActivity";
     public static final int PACKET = 0;
     private Intent captureVpnServiceIntent;
     private BroadcastReceiver analyzerCloseCmdReceiver = null;
@@ -94,19 +63,6 @@ public class MainActivity extends AppCompatActivity {
             startVPN();
         }
 
-//        { // test code
-//            PackageInfo packageInfo = null;
-//            try {
-//                packageInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
-//            } catch (NameNotFoundException e) {
-//                e.printStackTrace();
-//            }
-//            boolean value = (packageInfo.applicationInfo.flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
-//            String display = "version: " + packageInfo.versionName + " (" + (value ? "Debug" : "Production") + ")";
-//            TextView textView = (TextView) findViewById(R.id.version);
-//            textView.setText(display);
-//        }
-
         mHandler = new Handler(Looper.getMainLooper()) {
             @Override
             public void handleMessage(Message msg) {
@@ -124,27 +80,41 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void updateTableLayout(Packet packet) {
+        int color;
+        if (packet.getIpheader().getProtocol() == 6)
+            if (packet.getTcpheader().getDestinationPort() == 80 ||
+                    packet.getTcpheader().getSourcePort() == 80)
+                color = 0xFFE4FFC7;
+            else
+                color = 0xFFE7E6FF;
+        else
+            color = 0xFFDAEEFF;
+
         TableRow tableRow = new TableRow(this);
 
         TextView numberTextView = new TextView(this);
         numberTextView.setText(String.valueOf(++i));
         numberTextView.setGravity(Gravity.END);
         numberTextView.setPadding(10, 0, 10, 0);
+        numberTextView.setBackgroundColor(color);
         tableRow.addView(numberTextView);
 
         TextView timeTextView = new TextView(this);
         timeTextView.setPadding(10, 0, 10, 0);
         timeTextView.setText(DateFormat.getDateTimeInstance().format(new Date()));
+        timeTextView.setBackgroundColor(color);
         tableRow.addView(timeTextView);
 
         TextView sourceTextView = new TextView(this);
         sourceTextView.setPadding(10, 0, 10, 0);
         sourceTextView.setText(PacketUtil.intToIPAddress(packet.getIpheader().getSourceIP()));
+        sourceTextView.setBackgroundColor(color);
         tableRow.addView(sourceTextView);
 
         TextView destinationTextView = new TextView(this);
         destinationTextView.setPadding(10, 0, 10, 0);
         destinationTextView.setText(PacketUtil.intToIPAddress(packet.getIpheader().getDestinationIP()));
+        destinationTextView.setBackgroundColor(color);
         tableRow.addView(destinationTextView);
 
         TextView protocolTextView = new TextView(this);
@@ -153,11 +123,13 @@ public class MainActivity extends AppCompatActivity {
             protocolTextView.setText(R.string.tcp);
         else
             protocolTextView.setText(R.string.udp);
+        protocolTextView.setBackgroundColor(color);
         tableRow.addView(protocolTextView);
 
         TextView lengthTextView = new TextView(this);
         lengthTextView.setPadding(10, 0, 10, 0);
         lengthTextView.setText(String.valueOf(packet.getBuffer().length));
+        lengthTextView.setBackgroundColor(color);
         tableRow.addView(lengthTextView);
 
         TextView infoTextView = new TextView(this);
@@ -165,6 +137,7 @@ public class MainActivity extends AppCompatActivity {
         String info = makeInfo(packet);
         if (info != null)
             infoTextView.setText(info);
+        infoTextView.setBackgroundColor(color);
         tableRow.addView(infoTextView);
 
         tableLayout.addView(tableRow);

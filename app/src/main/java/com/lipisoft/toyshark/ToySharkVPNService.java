@@ -53,8 +53,6 @@ public class ToySharkVPNService extends VpnService implements Handler.Callback, 
     private PCapFileWriter pcapOutput;
     private FileOutputStream timeStream;
     private FileOutputStream appNameStream;
-    private Intent aROCameraMonitorService;
-    private Intent aRORadioMonitorService;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -296,7 +294,8 @@ public class ToySharkVPNService extends VpnService implements Handler.Callback, 
 
     private void instanciateAppNameFile() throws IOException {
         if (!traceDir.exists())
-            traceDir.mkdirs();
+            if (!traceDir.mkdirs())
+                Log.e(TAG, "CANNOT make " + traceDir.toString());
 
         // gen & open pcap file
         String sFileName = "appname";
@@ -353,7 +352,8 @@ public class ToySharkVPNService extends VpnService implements Handler.Callback, 
      */
     private void instanciatePcapFile() throws IOException {
         if (!traceDir.exists())
-            traceDir.mkdirs();
+            if (!traceDir.mkdirs())
+                Log.e(TAG, "CANNOT make " + traceDir.toString());
 
         // gen & open pcap file
         String sFileName = "traffic.pcap";
@@ -373,7 +373,8 @@ public class ToySharkVPNService extends VpnService implements Handler.Callback, 
     private void instanciateTimeFile() throws IOException {
 
         if (!traceDir.exists())
-            traceDir.mkdirs();
+            if (!traceDir.mkdirs())
+                Log.e(TAG, "CANNOT make " + traceDir.toString());
 
         // gen & open pcap file
         String sFileName = "time";
