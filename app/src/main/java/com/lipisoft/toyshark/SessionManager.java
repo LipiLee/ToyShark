@@ -419,6 +419,7 @@ public class SessionManager {
 	 * @return String
 	 */
 	public String createKey(int ip, int port, int srcIp, int srcPort){
-		return ip + ":" + port+"-"+srcIp+":"+srcPort;
+		return PacketUtil.intToIPAddress(ip) + ":" + port + "-" +
+				PacketUtil.intToIPAddress(srcIp) + ":" + srcPort;
 	}
 }

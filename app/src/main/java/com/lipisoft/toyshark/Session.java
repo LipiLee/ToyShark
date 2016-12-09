@@ -37,15 +37,15 @@ import com.lipisoft.toyshark.udp.UDPHeader;
 public class Session {
 	private static  final String TAG = "Session";
 	//help synchronize receivingStream
-	private Object syncReceive = new Object();
+	private final Object syncReceive = new Object();
 	
 	//for synchronizing sendingStream
-	private Object syncSend = new Object();
+	private final Object syncSend = new Object();
 	//for increasing and decreasing sendAmountSinceLastAck
-	private Object syncSendAmount = new Object();
+	private final Object syncSendAmount = new Object();
 	
 	//for setting TCP/UDP header
-	private Object syncLastHeader = new Object();
+	private final Object syncLastHeader = new Object();
 	
 	private SocketChannel socketchannel = null;
 	
@@ -130,6 +130,7 @@ public class Session {
 		receivingStream = new ByteArrayOutputStream();
 		sendingStream = new ByteArrayOutputStream();
 	}
+
 	/**
 	 * track how many byte sent to client since last ACK to avoid overloading
 	 * @param amount Amount
@@ -139,6 +140,7 @@ public class Session {
 			sendAmountSinceLastAck += amount;
 		}
 	}
+
 	/**
 	 * decrease value of sendAmountSinceLastAck so that client's window is not full
 	 * @param amount Amount
@@ -147,39 +149,37 @@ public class Session {
 		synchronized(syncSendAmount){
 			sendAmountSinceLastAck -= amount;
 			if(sendAmountSinceLastAck < 0){
+				Log.e(TAG, "Amount data to be decreased is over than its window.");
 				sendAmountSinceLastAck = 0;
 			}
 		}
 	}
+
 	/**
 	 * determine if client's receiving window is full or not.
 	 * @return boolean
 	 */
 	public boolean isClientWindowFull(){
-		boolean yes = false;
-		if(sendWindow > 0 && sendAmountSinceLastAck >= sendWindow){
-			yes = true;
-		}else if(sendWindow == 0 && sendAmountSinceLastAck > 65535){
-			yes = true;
-		}
-		return yes;
+		return (sendWindow > 0 && sendAmountSinceLastAck >= sendWindow) ||
+				(sendWindow == 0 && sendAmountSinceLastAck > 65535);
 	}
+
 	/**
 	 * append more data
 	 * @param data Data
 	 * @return boolean
 	 */
 	public boolean addReceivedData(byte[] data){
-		boolean success = true;
 		synchronized(syncReceive){
 			try {
 				receivingStream.write(data);
 			} catch (IOException e) {
-				success = false;
+				return false;
 			}
 		}
-		return success;
+		return true;
 	}
+
 	public void resetReceivingData(){
 		synchronized(syncReceive){
 			receivingStream.reset();
@@ -204,6 +204,7 @@ public class Session {
 		}
 		return data;
 	}
+
 	/**
 	 * buffer has more data for vpn client
 	 * @return boolean
@@ -211,12 +212,11 @@ public class Session {
 	public boolean hasReceivedData(){
 		return receivingStream.size() > 0;
 	}
+
 	public int getReceivedDataSize(){
-		int size = 0;
 		synchronized(syncReceive){
-			size = receivingStream.size();
+			return receivingStream.size();
 		}
-		return size;
 	}
 	/**
 	 * set data to be sent to destination server
@@ -224,26 +224,27 @@ public class Session {
 	 * @return boolean Success or not
 	 */
 	boolean setSendingData(byte[] data){
-		boolean success = true;
 		synchronized(syncSend){
 			try {
 				sendingStream.write(data);
 			} catch (IOException e) {
-				success = false;
 				Log.e(TAG, e.toString());
+                return false;
 			}
 		}
-		return success;
+		return true;
 	}
+
 	int getSendingDataSize(){
 		return sendingStream.size();
 	}
+
 	/**
 	 * dequeue data for sending to server
 	 * @return byte[]
 	 */
 	public byte[] getSendingData(){
-		byte[] data = null;
+		byte[] data;
 		synchronized(syncSend){
 			data = sendingStream.toByteArray();
 			sendingStream.reset();
@@ -385,11 +386,9 @@ public class Session {
 		this.hasReceivedLastSegment = hasReceivedLastSegment;
 	}
 	public IPv4Header getLastIPheader() {
-		IPv4Header header = null;
 		synchronized(syncLastHeader){
-			header = lastIPheader;
+			return lastIPheader;
 		}
-		return header;
 	}
 	void setLastIPheader(IPv4Header lastIPheader) {
 		synchronized(syncLastHeader){
@@ -397,11 +396,9 @@ public class Session {
 		}
 	}
 	public TCPHeader getLastTCPheader() {
-		TCPHeader header = null;
 		synchronized(syncLastHeader){
-			header = lastTCPheader;
+			return lastTCPheader;
 		}
-		return header;
 	}
 	void setLastTCPheader(TCPHeader lastTCPheader) {
 		synchronized(syncLastHeader){
@@ -410,11 +407,9 @@ public class Session {
 	}
 	
 	public UDPHeader getLastUDPheader() {
-		UDPHeader header = null;
 		synchronized(syncLastHeader){
-			header = lastUDPheader;
+			return lastUDPheader;
 		}
-		return header;
 	}
 	void setLastUDPheader(UDPHeader lastUDPheader) {
 		synchronized(syncLastHeader){
@@ -501,6 +496,4 @@ public class Session {
 	void setSelectionkey(SelectionKey selectionkey) {
 		this.selectionkey = selectionkey;
 	}
-	
-	
 }

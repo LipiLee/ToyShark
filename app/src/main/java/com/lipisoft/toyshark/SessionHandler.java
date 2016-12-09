@@ -38,9 +38,9 @@ import android.util.Log;
  * Date: May 22, 2014
  */
 class SessionHandler {
-	public static final String TAG = "AROCollector";
+	public static final String TAG = "SessionHandler";
 	
-	private static Object synObject = new Object();
+	private static final Object synObject = new Object();
 	private static volatile SessionHandler handler = null;
 	private SessionManager sessionManager;
 	private IClientPacketWriter writer;

@@ -29,8 +29,8 @@ import java.util.Queue;
 public class SocketData {
     private static final String TAG = "SocketData";
 
-	private static Object syncObj = new Object();
-	private static Object syncData = new Object();
+	private static final Object syncObj = new Object();
+	private static final Object syncData = new Object();
 	private volatile static SocketData instance = null;
 	private Queue<byte[]> data;
 
@@ -46,33 +46,22 @@ public class SocketData {
 	}
 
 	private SocketData(){
-		data = new LinkedList<byte[]>();
+		data = new LinkedList<>();
 	}
 
 	public void addData(byte[] packet) {
 		synchronized(syncData){
-            // TODO must copy it without just using it?
-			byte[] copy = new byte[packet.length];
-			System.arraycopy(packet, 0, copy, 0, packet.length);
-			try{
-				data.add(copy);
-			}catch(IllegalStateException e){
+			try {
+				data.add(packet);
+			} catch(IllegalStateException e) {
 				Log.e(TAG, e.toString());
-			}catch(NullPointerException e){
-				Log.e(TAG, e.toString());
-			}catch(Exception e){
-                Log.e(TAG, e.toString());
             }
 		}
 	}
 
 	public byte[] getData() {
-		byte[] packet;
-
 		synchronized(syncData) {
-			packet = data.poll();
+			return data.poll();
 		}
-
-		return packet;
 	}
 }//end class

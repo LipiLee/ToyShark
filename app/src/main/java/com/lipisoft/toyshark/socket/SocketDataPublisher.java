@@ -34,7 +34,7 @@ public class SocketDataPublisher implements Runnable {
 
 	public SocketDataPublisher(){
 		data = SocketData.getInstance();
-		subscribers = new ArrayList<IReceivePacket>();
+		subscribers = new ArrayList<>();
 	}
 
 	/**
@@ -51,7 +51,7 @@ public class SocketDataPublisher implements Runnable {
 	public void run() {
 		Log.d(SessionManager.TAG,"BackgroundWriter starting...");
 		
-		while(!isShuttingDown) {
+		while(!isShuttingDown()) {
 			byte[] packetData = data.getData();
 			if(packetData != null) {
 				for(IReceivePacket subscriber: subscribers){
@@ -64,7 +64,6 @@ public class SocketDataPublisher implements Runnable {
 					e.printStackTrace();
 				}
 			}
-			
 		}
 		Log.d(SessionManager.TAG,"BackgroundWriter ended");
 	}
