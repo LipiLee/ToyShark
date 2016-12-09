@@ -120,7 +120,7 @@ public class IPv4Header {
 		return internetHeaderLength;
 	}
 
-	byte getDscpOrTypeOfService() {
+	public byte getDscpOrTypeOfService() {
 		return dscpOrTypeOfService;
 	}
 
@@ -163,7 +163,7 @@ public class IPv4Header {
 		return fragmentOffset;
 	}
 
-	byte getTimeToLive() {
+	public byte getTimeToLive() {
 		return timeToLive;
 	}
 

@@ -21,62 +21,42 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Gravity;
+import android.view.View;
+import android.widget.ExpandableListView;
+import android.widget.SimpleExpandableListAdapter;
 import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 
+import com.lipisoft.toyshark.ip.IPv4Header;
 import com.lipisoft.toyshark.tcp.TCPHeader;
 import com.lipisoft.toyshark.util.PacketUtil;
 
 import java.net.NetworkInterface;
 import java.text.DateFormat;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
     private static String TAG = "MainActivity";
+    private static final String NAME = "NAME";
     public static final int PACKET = 0;
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE = 0;
-    private Intent captureVpnServiceIntent;
+    Intent captureVpnServiceIntent;
     private BroadcastReceiver analyzerCloseCmdReceiver = null;
     public static Handler mHandler;
     private TableLayout tableLayout;
     private int i = 0;
-
-    /**
-     * Received broadcast adb shell am broadcast -a arodatacollector.home.activity.close
-     */
-    private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context ctx, Intent intent) {
-            Log.d(TAG, "received analyzer close cmd intent at " + System.currentTimeMillis());
-            boolean rez = stopService(captureVpnServiceIntent);
-            Log.d(TAG, "stopService result=" + rez);
-            unregisterReceiver(broadcastReceiver);
-            finish();
-        }
-    };
-
-    void checkRuntimePermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED) {
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-                Log.d(TAG, "REQUEST_WRITE_EXTERNAL_STORAGE is needed.");
-            } else {
-                Log.d(TAG, "requestPermission");
-                ActivityCompat.requestPermissions(this,
-                        new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_WRITE_EXTERNAL_STORAGE);
-            }
-        }
-
-    }
+    List<Packet> packets = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        Log.i(TAG, "onCreate(...)");
         super.onCreate(savedInstanceState);
-        //setContentView(R.layout.splash);
         setContentView(R.layout.activity_main);
         checkRuntimePermission();
 
@@ -84,7 +64,6 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void handleMessage(Message msg) {
                 Packet packet = (Packet) msg.obj;
-
                 if(msg.what == PACKET)
                     updateTableLayout(packet);
                 else
@@ -93,6 +72,22 @@ public class MainActivity extends AppCompatActivity {
         };
 
         tableLayout = (TableLayout) findViewById(R.id.tableLayout);
+    }
+
+    void checkRuntimePermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                // TODO inform the user to ask runtime permission
+                ;
+            } else {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_WRITE_EXTERNAL_STORAGE);
+            }
+        } else
+            if (networkAndAirplaneModeCheck())
+                startVPN();
+
 
     }
 
@@ -108,8 +103,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    void updateTableLayout(Packet packet) {
+    void updateTableLayout(final Packet packet) {
         int color;
+        packets.add(packet);
         if (packet.getIpheader().getProtocol() == 6)
             if (packet.getTcpheader().getDestinationPort() == 80 ||
                     packet.getTcpheader().getSourcePort() == 80)
@@ -176,12 +172,132 @@ public class MainActivity extends AppCompatActivity {
         infoTextView.setTextColor(0xFF000000);
         tableRow.addView(infoTextView);
 
+        tableRow.setClickable(true);
+        tableRow.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, "TableRow is selected");
+                TableRow selectedTableRow = (TableRow) v;
+                TextView noTextView = (TextView) selectedTableRow.getChildAt(0);
+                int index = Integer.valueOf(noTextView.getText().toString());
+                Packet packet1 = packets.get(index-1);
+                updatePacketDetailView(packet1);
+            }
+        });
+
         tableLayout.addView(tableRow);
+    }
+
+    private void updatePacketDetailView(Packet packet) {
+
+        List<Map<String, String>> groupList = new ArrayList<>();
+        List<List<Map<String, String>>> childList = new ArrayList<>();
+
+        IPv4Header iPv4Header = packet.getIpheader();
+        String src = PacketUtil.intToIPAddress(iPv4Header.getSourceIP());
+        String dst = PacketUtil.intToIPAddress(iPv4Header.getDestinationIP());
+        Map<String, String> ipGroupMap = new Hashtable<>();
+        ipGroupMap.put(NAME, "Internet Protocol Version 4, Src: " + src + ", Dst: " + dst);
+        groupList.add(ipGroupMap);
+
+        TCPHeader tcpHeader = packet.getTcpheader();
+        int len = packet.getBuffer().length - iPv4Header.getIPHeaderLength() - tcpHeader.getTCPHeaderLength();
+        Map<String, String> tcpGroupMap = new Hashtable<>();
+        tcpGroupMap.put(NAME, "Transmission Control Protocol, Src Port: " +
+                tcpHeader.getSourcePort() + ", Dst Port: " + tcpHeader.getDestinationPort() +
+                ", Seq: " + tcpHeader.getSequenceNumber() + ", Ack: " + tcpHeader.getAckNumber() +
+                ", Len: " + len);
+        groupList.add(tcpGroupMap);
+
+        List<Map<String, String>> ipChildList = new ArrayList<>();
+
+        Map<String, String> ipVersionMap = new HashMap<>();
+        ipVersionMap.put(NAME, "Version: 4");
+        ipChildList.add(ipVersionMap);
+
+        Map<String, String> headerLengthMap = new HashMap<>();
+        headerLengthMap.put(NAME, "Header Length: " + iPv4Header.getIPHeaderLength());
+        ipChildList.add(headerLengthMap);
+
+        byte[] dsf = {iPv4Header.getDscpOrTypeOfService()};
+        Map<String, String> differentiatedServiceFieldMap = new HashMap<>();
+        differentiatedServiceFieldMap.put(NAME, "Differentiated Service Field: " + PacketUtil.bytesToStringArray(dsf));
+        ipChildList.add(differentiatedServiceFieldMap);
+
+        Map<String, String> totalLengthMap = new HashMap<>();
+        totalLengthMap.put(NAME, "Total Length" + iPv4Header.getTotalLength());
+        ipChildList.add(totalLengthMap);
+
+        Map<String, String> identificationMap = new HashMap<>();
+        identificationMap.put(NAME, "Identification: " + iPv4Header.getIdenfication());
+        ipChildList.add(identificationMap);
+
+        byte[] flag = {iPv4Header.getFlag()};
+        Map<String, String> flagsMap = new HashMap<>();
+        flagsMap.put(NAME, "Flags: " + PacketUtil.bytesToStringArray(flag));
+        ipChildList.add(flagsMap);
+
+        Map<String, String> fragmentOffsetMap = new HashMap<>();
+        fragmentOffsetMap.put(NAME, "Fragment offset: " + iPv4Header.getFragmentOffset());
+        ipChildList.add(fragmentOffsetMap);
+
+        Map<String, String> timeToLiveMap = new HashMap<>();
+        timeToLiveMap.put(NAME, "Time to live: " + iPv4Header.getTimeToLive());
+        ipChildList.add(timeToLiveMap);
+
+        Map<String, String> protocolMap = new HashMap<>();
+        if (iPv4Header.getProtocol() == 6) {
+            protocolMap.put(NAME, "Protocol: TCP");
+        } else {
+            protocolMap.put(NAME, "Protocol: UDP");
+        }
+        ipChildList.add(protocolMap);
+
+//        byte[] checksum = {iPv4Header.getHeaderChecksum()};
+//        child.add("Header checksum: " + iPv4Header.getHeaderChecksum());
+        Map<String, String> sourceMap = new HashMap<>();
+        sourceMap.put(NAME, "Source: " + src);
+        ipChildList.add(sourceMap);
+
+        Map<String, String> destinationMap = new HashMap<>();
+        destinationMap.put(NAME, "Destination" + dst);
+        ipChildList.add(destinationMap);
+
+        List<Map<String, String>> tcpChildList = new ArrayList<>();
+
+        Map<String, String> sourcePortMap = new HashMap<>();
+        sourcePortMap.put(NAME, "Source Port: " + tcpHeader.getSourcePort());
+        tcpChildList.add(sourcePortMap);
+
+        Map<String, String> destinationPortMap =  new HashMap<>();
+        destinationPortMap.put(NAME, "Destination Port: " + tcpHeader.getDestinationPort());
+        tcpChildList.add(destinationPortMap);
+
+        childList.add(ipChildList);
+        childList.add(tcpChildList);
+
+        ExpandableListView expandableListView = (ExpandableListView) findViewById(R.id.packetDetailView);
+        try {
+            expandableListView.setAdapter(new SimpleExpandableListAdapter(
+                    this,
+                    groupList,
+                    android.R.layout.simple_expandable_list_item_1,
+                    new String[]{NAME},
+                    new int[]{android.R.id.text1},
+                    childList,
+                    android.R.layout.simple_expandable_list_item_2,
+                    new String[]{NAME},
+                    new int[]{android.R.id.text1}
+            ));
+        } catch (NullPointerException e) {
+            Log.e(TAG, e.toString());
+        }
     }
 
     private String makeTCPinfo(Packet packet) {
         TCPHeader tcpHeader = packet.getTcpheader();
-        StringBuilder stringBuilder = new StringBuilder(tcpHeader.getSourcePort() + "->" + tcpHeader.getDestinationPort() + " [");
+        StringBuilder stringBuilder = new StringBuilder(tcpHeader.getSourcePort() + "->" +
+                tcpHeader.getDestinationPort() + " [");
         if (tcpHeader.isSYN())
             stringBuilder.append("SYN");
         if (tcpHeader.isACK())
