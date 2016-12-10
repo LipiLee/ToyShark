@@ -25,11 +25,13 @@ import java.io.IOException;
  * Date: May 22, 2014
  */
 public class ClientPacketWriterImpl implements IClientPacketWriter {
-	private static Object syncObj = new Object();
+	private static final Object syncObj = new Object();
 	private FileOutputStream clientwriter;
+
 	public ClientPacketWriterImpl(FileOutputStream clientwriter){
 		this.clientwriter = clientwriter;
 	}
+
 	@Override
 	public void write(byte[] data) throws IOException {
 		synchronized(syncObj){

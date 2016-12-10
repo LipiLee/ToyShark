@@ -33,15 +33,19 @@ public class Packet {
 	public IPv4Header getIpheader() {
 		return ipheader;
 	}
+
 	public void setIpheader(IPv4Header ipheader) {
 		this.ipheader = ipheader;
 	}
+
 	TCPHeader getTcpheader() {
 		return tcpheader;
 	}
+
 	public void setTcpheader(TCPHeader tcpheader) {
 		this.tcpheader = tcpheader;
 	}
+
 	/**
 	 * the whole packet data as an array of byte
 	 * @return byte[]
@@ -49,14 +53,17 @@ public class Packet {
 	public byte[] getBuffer() {
 		return buffer;
 	}
+
 	public void setBuffer(byte[] buffer) {
 		this.buffer = buffer;
 	}
+
 	public int getPacketBodyLength(){
 		if(buffer != null)
 			return buffer.length - tcpheader.getTCPHeaderLength() + ipheader.getIPHeaderLength();
 		return 0;
 	}
+
 	/**
 	 * get data portion of the packet if available. Otherwise, return empty array of byte
 	 * @return array of byte
@@ -73,6 +80,4 @@ public class Packet {
 		}
 		return new byte[0];
 	}
-	
-	
 }

@@ -63,22 +63,22 @@ public class TCPHeader {
 		setFlagBits();
 	}
 	private void setFlagBits(){
-		  isack = (this.tcpFlags & 0x10) > 0;
-		  
-		  isfin = (this.tcpFlags & 0x01) > 0;
-		  //End Of Letter
-		  ispsh = (this.tcpFlags & 0x08) > 0;
-		  
-		  isrst = (this.tcpFlags & 0x04) > 0;
-		  
-		  issyn = (this.tcpFlags & 0x02) > 0;
-		  
-		  isurg = (this.tcpFlags & 0x20) > 0;
-		  
-		  iscwr = (this.tcpFlags & 0x80) > 0;
-		  
-		  isece = (this.tcpFlags & 0x40) > 0;
-	  }
+		isack = (this.tcpFlags & 0x10) > 0;
+
+		isfin = (this.tcpFlags & 0x01) > 0;
+		//End Of Letter
+		ispsh = (this.tcpFlags & 0x08) > 0;
+
+		isrst = (this.tcpFlags & 0x04) > 0;
+
+		issyn = (this.tcpFlags & 0x02) > 0;
+
+		isurg = (this.tcpFlags & 0x20) > 0;
+
+		iscwr = (this.tcpFlags & 0x80) > 0;
+
+		isece = (this.tcpFlags & 0x40) > 0;
+	}
 	public boolean isNS(){
 		return isns;
 	}

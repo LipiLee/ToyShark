@@ -5,11 +5,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
-
-
-
-
-
 /**
  * Class for creating capture files in libcap format.<br>
  * 

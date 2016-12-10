@@ -48,7 +48,7 @@ import java.util.Set;
  * Date: May 20, 2014
  */
 public class SessionManager {
-	public static final String TAG = "AROCollector";
+	public static final String TAG = "SessionManager";
 	private static Object syncObj = new Object();
 	private static volatile SessionManager instance = null;
 	private Hashtable<String, Session> table = null;

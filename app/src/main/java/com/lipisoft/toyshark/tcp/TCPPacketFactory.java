@@ -36,7 +36,7 @@ import android.util.Log;
  * Date: May 8, 2014
  */
 public class TCPPacketFactory {
-	public static final String TAG = "AROCollector";
+	public static final String TAG = "TCPPacketFactory";
 	
 	private TCPHeader copyTCPHeader(TCPHeader tcpheader){
 		TCPHeader tcp = new TCPHeader(tcpheader.getSourcePort(), tcpheader.getDestinationPort(), tcpheader.getSequenceNumber(), 

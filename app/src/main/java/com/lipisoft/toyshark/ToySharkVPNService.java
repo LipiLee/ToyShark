@@ -38,7 +38,7 @@ import java.util.Locale;
  * Created by Lipi on 16. 4. 7..
  */
 public class ToySharkVPNService extends VpnService implements Handler.Callback, Runnable, IProtectSocket, IReceivePacket{
-    private static final String TAG = "ToyShark";
+    private static final String TAG = "ToySharkVPNService";
     public static final String SERVICE_CLOSE_CMD_INTENT = "arovpndatacollector.service.close";
     private Handler mHandler;
     private Thread mThread;

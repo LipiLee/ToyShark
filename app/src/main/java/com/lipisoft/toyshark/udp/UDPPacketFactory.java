@@ -17,16 +17,6 @@ public class UDPPacketFactory {
 		int length = PacketUtil.getNetworkInt(buffer, start + 4,2);
 		int checksum = PacketUtil.getNetworkInt(buffer, start + 6,2);
 
-//		StringBuilder str = new StringBuilder();
-//		str.append("\r\n..... new UDP header .....");
-//		str.append("\r\nstarting position in buffer: "+start);
-//		str.append("\r\nSrc port: "+srcPort);
-//		str.append("\r\nDest port: "+destPort);
-//		str.append("\r\nLength: "+length);
-//		str.append("\r\nChecksum: "+checksum);
-//		str.append("\r\n...... end UDP header .....");
-//		Log.d("AROCollector",str.toString());
-
 		return new UDPHeader(srcPort, destPort, length, checksum);
 	}
 	public UDPHeader copyHeader(UDPHeader header){

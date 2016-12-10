@@ -28,7 +28,7 @@ import java.util.concurrent.TimeUnit;
 
 
 public class SocketNIODataService implements Runnable {
-	public static final String TAG = "AROCollector";
+	public static final String TAG = "SocketNIODataService";
 	public static Object syncSelector = new Object();
 	public static Object syncSelector2 = new Object();
 

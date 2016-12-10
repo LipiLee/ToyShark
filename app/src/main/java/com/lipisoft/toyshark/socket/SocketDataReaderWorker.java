@@ -29,7 +29,7 @@ import com.lipisoft.toyshark.util.PacketUtil;
  * Date: July 30, 2014
  */
 class SocketDataReaderWorker implements Runnable {
-	public static final String TAG = "AROCollector";
+	public static final String TAG = "SocketDataReaderWorker";
 	private IClientPacketWriter writer;
 	private TCPPacketFactory factory;
 	private UDPPacketFactory udpfactory;

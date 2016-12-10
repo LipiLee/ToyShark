@@ -1,8 +1,5 @@
 package com.lipisoft.toyshark.packetRebuild;
 
-import java.io.IOException;
-import java.io.InputStream;
-
 /**
  * Pkt header in the libcap file.
  * 

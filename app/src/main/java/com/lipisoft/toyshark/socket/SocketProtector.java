@@ -27,7 +27,7 @@ import java.net.Socket;
  * Date: June 1, 2014
  */
 public class SocketProtector {
-	private static Object synObject = new Object();
+	private static final Object synObject = new Object();
 	private static volatile SocketProtector instance = null;
 	private IProtectSocket protector = null;
 

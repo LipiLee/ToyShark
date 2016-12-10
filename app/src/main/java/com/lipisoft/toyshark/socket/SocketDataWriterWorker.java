@@ -17,7 +17,7 @@ import java.nio.channels.SocketChannel;
 import java.util.Date;
 
 class SocketDataWriterWorker implements Runnable{
-	public static final String TAG = "AROCollector";
+	public static final String TAG = "SocketDataWriterWorker";
 	private IClientPacketWriter writer;
 	private TCPPacketFactory factory;
 	private UDPPacketFactory udpfactory;
