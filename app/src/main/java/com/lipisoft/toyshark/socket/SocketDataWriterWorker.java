@@ -19,34 +19,38 @@ import java.util.Date;
 class SocketDataWriterWorker implements Runnable{
 	public static final String TAG = "SocketDataWriterWorker";
 	private IClientPacketWriter writer;
-	private TCPPacketFactory factory;
-	private UDPPacketFactory udpfactory;
-	private SessionManager sessionmg;
+	private TCPPacketFactory tcpPacketFactory;
+	private UDPPacketFactory udpPacketFactory;
+	private SessionManager sessionManager;
 	private String sessionKey = "";
 	private SocketData pdata;
-	SocketDataWriterWorker(TCPPacketFactory tcpfactory, UDPPacketFactory udpfactory, IClientPacketWriter writer){
-		sessionmg = SessionManager.getInstance();
+
+	SocketDataWriterWorker(TCPPacketFactory tcpPacketFactory, UDPPacketFactory udpPacketFactory, IClientPacketWriter writer){
+		sessionManager = SessionManager.getInstance();
 		pdata = SocketData.getInstance();
-		this.factory = tcpfactory;
-		this.udpfactory = udpfactory;
+		this.tcpPacketFactory = tcpPacketFactory;
+		this.udpPacketFactory = udpPacketFactory;
 		this.writer = writer;
 	}
+
 	public String getSessionKey() {
 		return sessionKey;
 	}
+
 	void setSessionKey(String sessionKey) {
 		this.sessionKey = sessionKey;
 	}
+
 	@Override
 	public void run() {
-		Session sess = sessionmg.getSessionByKey(sessionKey);
+		Session sess = sessionManager.getSessionByKey(sessionKey);
 		if(sess == null){
 			return;
 		}
 		sess.setBusywrite(true);
-		if(sess.getSocketchannel() != null){
+		if(sess.getSocketChannel() != null){
 			writeTCP(sess);
-		}else if(sess.getUdpchannel() != null){
+		}else if(sess.getUdpChannel() != null){
 			writeUDP(sess);
 		}
 		sess.setBusywrite(false);
@@ -55,20 +59,20 @@ class SocketDataWriterWorker implements Runnable{
 					PacketUtil.intToIPAddress(sess.getDestAddress())+":"+sess.getDestPort()
 					+"-"+PacketUtil.intToIPAddress(sess.getSourceIp())+":"+sess.getSourcePort());
 			sess.getSelectionkey().cancel();
-			if(sess.getSocketchannel() != null && sess.getSocketchannel().isConnected()){
+			if(sess.getSocketChannel() != null && sess.getSocketChannel().isConnected()){
 				try {
-					sess.getSocketchannel().close();
+					sess.getSocketChannel().close();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-			}else if(sess.getUdpchannel() != null && sess.getUdpchannel().isConnected()){
+			}else if(sess.getUdpChannel() != null && sess.getUdpChannel().isConnected()){
 				try {
-					sess.getUdpchannel().close();
+					sess.getUdpChannel().close();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
 			}
-			sessionmg.closeSession(sess);
+			sessionManager.closeSession(sess);
 		}
 
 	}
@@ -76,7 +80,7 @@ class SocketDataWriterWorker implements Runnable{
 		if(!sess.hasDataToSend()){
 			return;
 		}
-		DatagramChannel channel = sess.getUdpchannel();
+		DatagramChannel channel = sess.getUdpChannel();
 		String name = PacketUtil.intToIPAddress(sess.getDestAddress())+":"+sess.getDestPort()+
 				"-"+PacketUtil.intToIPAddress(sess.getSourceIp())+":"+sess.getSourcePort();
 		byte[] data = sess.getSendingData();
@@ -102,13 +106,13 @@ class SocketDataWriterWorker implements Runnable{
 		}
 	}
 	
-	private void writeTCP(Session sess){
-		SocketChannel channel = sess.getSocketchannel();
+	private void writeTCP(Session session){
+		SocketChannel channel = session.getSocketChannel();
 
-		String name = PacketUtil.intToIPAddress(sess.getDestAddress())+":"+sess.getDestPort()+
-				"-"+PacketUtil.intToIPAddress(sess.getSourceIp())+":"+sess.getSourcePort();
+		String name = PacketUtil.intToIPAddress(session.getDestAddress())+":"+session.getDestPort()+
+				"-"+PacketUtil.intToIPAddress(session.getSourceIp())+":"+session.getSourcePort();
 		
-		byte[] data = sess.getSendingData();
+		byte[] data = session.getSendingData();
 		ByteBuffer buffer = ByteBuffer.allocate(data.length);
 		buffer.put(data);
 		buffer.flip();
@@ -123,7 +127,7 @@ class SocketDataWriterWorker implements Runnable{
 			Log.e(TAG,"Error writing to server: "+e.getMessage());
 			
 			//close connection with vpn client
-			byte[] rstdata = factory.createRstData(sess.getLastIPheader(), sess.getLastTCPheader(), 0);
+			byte[] rstdata = tcpPacketFactory.createRstData(session.getLastIpHeader(), session.getLastTcpHeader(), 0);
 			try {
 				writer.write(rstdata);
 				pdata.addData(rstdata);
@@ -132,7 +136,7 @@ class SocketDataWriterWorker implements Runnable{
 			}
 			//remove session
 			Log.e(TAG,"failed to write to remote socket, aborting connection");
-			sess.setAbortingConnection(true);
+			session.setAbortingConnection(true);
 		}
 		
 	}

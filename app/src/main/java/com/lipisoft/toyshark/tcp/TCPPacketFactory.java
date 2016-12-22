@@ -76,7 +76,7 @@ public class TCPPacketFactory {
 		tcp.setAckNumber(ackToClient);
 		tcp.setSequenceNumber(seqToClient);
 		
-		ip.setIdenfication(PacketUtil.getPacketId());
+		ip.setIdentification(PacketUtil.getPacketId());
 		
 		//ACK
 		tcp.setIsACK(isack);
@@ -115,7 +115,7 @@ public class TCPPacketFactory {
 		tcp.setDestinationPort(destPort);
 		tcp.setSourcePort(sourcePort);
 		
-		ip.setIdenfication(PacketUtil.getPacketId());
+		ip.setIdentification(PacketUtil.getPacketId());
 		
 		tcp.setIsRST(false);
 		tcp.setIsACK(false);
@@ -174,7 +174,7 @@ public class TCPPacketFactory {
 		tcp.setDestinationPort(destPort);
 		tcp.setSourcePort(sourcePort);
 		
-		ip.setIdenfication(0);
+		ip.setIdentification(0);
 		
 		tcp.setIsRST(true);
 		tcp.setIsACK(false);
@@ -227,7 +227,7 @@ public class TCPPacketFactory {
 		tcp.setAckNumber(ackToClient);
 		tcp.setSequenceNumber(seqNumber);
 		
-		ip.setIdenfication(PacketUtil.getPacketId());
+		ip.setIdentification(PacketUtil.getPacketId());
 		
 		//ACK
 		tcp.setIsACK(true);
@@ -274,7 +274,7 @@ public class TCPPacketFactory {
 		tcpheader.setAckNumber(ackNumber);
 		tcpheader.setSequenceNumber(seqNumber);
 		
-		ipheader.setIdenfication(PacketUtil.getPacketId());
+		ipheader.setIdentification(PacketUtil.getPacketId());
 		
 		//ACK is always sent
 		tcpheader.setIsACK(true);
@@ -339,8 +339,8 @@ public class TCPPacketFactory {
 		int sendertimestamp = (int)currentdate.getTime();
 		tcpheader.setTimeStampSender(sendertimestamp);
 		
-		packet.setIpheader(ipheader);
-		packet.setTcpheader(tcpheader);
+		packet.setIpHeader(ipheader);
+		packet.setTcpHeader(tcpheader);
 
 		packet.setBuffer(createPacketData(ipheader, tcpheader, null));
 		return packet;
@@ -385,8 +385,8 @@ public class TCPPacketFactory {
 		System.arraycopy(tcpchecksum, 0, buffer,tcpstart + 16, 2);
 
 		Packet packet = new Packet();
-		packet.setIpheader(ipheader);
-		packet.setTcpheader(tcpheader);
+		packet.setIpHeader(ipheader);
+		packet.setTcpHeader(tcpheader);
 		packet.setBuffer(buffer);
 
 		Message message = MainActivity.mHandler.obtainMessage(MainActivity.PACKET, packet);
@@ -505,32 +505,32 @@ public class TCPPacketFactory {
 		byte nsbyte = buffer[start + 12];
 		boolean isNs = (nsbyte & 0x1) > 0x0;
 		
-		int tcpflag = PacketUtil.getNetworkInt(buffer, start + 13, 1);
+		int tcpFlag = PacketUtil.getNetworkInt(buffer, start + 13, 1);
 		int windowSize = PacketUtil.getNetworkInt(buffer, start + 14, 2);
 		int checksum = PacketUtil.getNetworkInt(buffer, start + 16, 2);
-		int urgenpointer = PacketUtil.getNetworkInt(buffer, start + 18, 2);
+		int urgentPointer = PacketUtil.getNetworkInt(buffer, start + 18, 2);
 		byte[] options;
 		if(dataOffset > 5){
-			int optionlength = (dataOffset - 5) * 4;
-			
-			options = new byte[optionlength];
-			System.arraycopy(buffer, start + 20, options, 0, optionlength);
+			int optionLength = (dataOffset - 5) * 4;
+
+			options = new byte[optionLength];
+			System.arraycopy(buffer, start + 20, options, 0, optionLength);
 		}else{
 			options = new byte[0];
 		}
-		TCPHeader head = new TCPHeader(sourcePort, destPort, sequenceNumber, dataOffset, isNs, tcpflag, windowSize, checksum, urgenpointer, options, ackNumber);
+		TCPHeader head = new TCPHeader(sourcePort, destPort, sequenceNumber, dataOffset, isNs, tcpFlag, windowSize, checksum, urgentPointer, options, ackNumber);
 		extractOptionData(head);
 		return head;
 	}
 	private void extractOptionData(TCPHeader head){
 		byte[] options = head.getOptions();
 		byte kind;
-		for(int i = 0;i<options.length;i++){
+		for(int i = 0; i < options.length; i++){
 			kind = options[i];
 			if(kind == 2){
 				i +=2;
-				int segsize = PacketUtil.getNetworkInt(options, i, 2);
-				head.setMaxSegmentSize(segsize);
+				int segSize = PacketUtil.getNetworkInt(options, i, 2);
+				head.setMaxSegmentSize(segSize);
 				i++;
 			}else if(kind == 3){
 				i += 2;
@@ -541,8 +541,8 @@ public class TCPPacketFactory {
 				head.setSelectiveAckPermitted(true);
 			}else if(kind == 5){//SACK => selective acknowledgment
 				i++;
-				int sacklength = PacketUtil.getNetworkInt(options, i, 1);
-				i = i + (sacklength - 2);
+				int sackLength = PacketUtil.getNetworkInt(options, i, 1);
+				i = i + (sackLength - 2);
 				//case 10, 18, 26 and 34
 				//TODO: handle missing segments
 				//rare case => low priority
@@ -557,5 +557,4 @@ public class TCPPacketFactory {
 			}
 		}
 	}
-	
 }

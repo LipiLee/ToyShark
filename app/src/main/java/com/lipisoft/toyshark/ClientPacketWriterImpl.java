@@ -24,26 +24,20 @@ import java.io.IOException;
  * @author Borey Sao
  * Date: May 22, 2014
  */
-public class ClientPacketWriterImpl implements IClientPacketWriter {
-	private static final Object syncObj = new Object();
-	private FileOutputStream clientwriter;
+class ClientPacketWriterImpl implements IClientPacketWriter {
+	private FileOutputStream clientWriter;
 
-	public ClientPacketWriterImpl(FileOutputStream clientwriter){
-		this.clientwriter = clientwriter;
+	ClientPacketWriterImpl(FileOutputStream clientWriter){
+		this.clientWriter = clientWriter;
 	}
 
 	@Override
-	public void write(byte[] data) throws IOException {
-		synchronized(syncObj){
-			clientwriter.write(data);
-		}
+	public synchronized void write(byte[] data) throws IOException {
+		clientWriter.write(data);
 	}
 
 	@Override
-	public void write(byte[] data, int offset, int count) throws IOException {
-		synchronized(syncObj){
-			clientwriter.write(data, offset, count);
-		}
+	public synchronized void write(byte[] data, int offset, int count) throws IOException {
+		clientWriter.write(data, offset, count);
 	}
-
 }

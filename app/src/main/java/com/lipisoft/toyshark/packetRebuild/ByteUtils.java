@@ -30,8 +30,8 @@ public class ByteUtils
 	 * The method pull out array of bytes and return them as a
 	 *  readable string in mac address common format xx:xx:xx:xx:xx:xx
 	 * @param theBytes - the packet
-	 * @param startIdx 
-	 * @param endIdx
+	 * @param startIdx start index
+	 * @param endIdx end index
 	 * @return the mas address as string.
 	 */
 	public String getAsMac(byte[] theBytes,int startIdx,int endIdx)
@@ -48,8 +48,8 @@ public class ByteUtils
 			int second1 = (num & 0x0f);
 			int first1 = ((num & 0xf0) >> 4);
 			
-			char second  = (char) ((second1<10)?'0'+second1:'A'+second1-10); 
-			char first = (char) ((first1<10)?'0'+first1:'A'+first1-10);
+			char second  = (char) (second1 < 10 ? '0' + second1 : 'A' + second1 - 10);
+			char first = (char) (first1 < 10 ? '0' + first1 : 'A' + first1 - 10);
 			
 			statArr[idx++]=first;
 			statArr[idx++]=second;
@@ -59,7 +59,7 @@ public class ByteUtils
 	
 	/**
 	 * covert byte array to string in a hex readable format 
-	 * @param thePacket
+	 * @param thePacket packet stream
 	 * @return the byte array as string (in hex).
 	 */
 	public String getAsString(byte[] thePacket)
@@ -70,15 +70,15 @@ public class ByteUtils
 	/**
 	 * covert byte array slice to string in a hex readable format
 	 * @param thePacket - the byte array.
-	 * @param startidx - start index of the slice.
-	 * @param endidx - end index of the slice.
+	 * @param startIndex - start index of the slice.
+	 * @param endIndex - end index of the slice.
 	 * @return string
 	 */
-	public String getAsString(byte[] thePacket,int startidx,int endidx)
+	private String getAsString(byte[] thePacket,int startIndex,int endIndex)
 	{
-		return getAsString(thePacket,startidx,endidx,16);
+		return getAsString(thePacket,startIndex,endIndex,16);
 	}
-		
+
 	/**
 	 * covert byte array slice to string in a hex readable format
 	 * @param thePacket - the byte array.
@@ -87,7 +87,7 @@ public class ByteUtils
 	 * @param maxInLine - maximum chars per line
 	 * @return string
 	 */
-	public String getAsString(byte[] thePacket,int startidx,int endidx,int maxInLine)
+	private String getAsString(byte[] thePacket,int startidx,int endidx,int maxInLine)
 	{
 		int idx=0;
 		for(int i=startidx ; i<endidx ; i++)
@@ -123,7 +123,7 @@ public class ByteUtils
 	/**
 	 * turn 16 bits unsigned integer number to byte array representing the number
 	 *  in network order.
-	 * @param theNumber
+	 * @param theNumber number to be changed to network stream
 	 * @return byte array 
 	 *  (int in java is 4 bytes here only the lower 2 bytes are counted)
 	 */
@@ -140,7 +140,7 @@ public class ByteUtils
 	/**
 	 * turn 32 bits unsigned integer number to byte array representing the number
 	 *  in network order.
-	 * @param theNumber
+	 * @param theNumber number to be changed to network stream
 	 * @return byte array 
 	 */
 	public static byte[] getAs_uint32_NetOrder(int theNumber)
@@ -204,7 +204,7 @@ public class ByteUtils
 	 * @param idx - the starting index
 	 * @return the num 
 	 */
-	public static long getByteNetOrderTo_unit32(byte[] theBytes,int idx)
+	static long getByteNetOrderTo_unit32(byte[] theBytes,int idx)
 	{
 		long sum = 0;
 		for (int i=0 ; i<4 ; i++)
@@ -217,16 +217,16 @@ public class ByteUtils
 	/**
 	 * Limited to max of 8 bytes long
 	 * @param theBytes
-	 * @param idx
-	 * @param size
+	 * @param idx index
+	 * @param size size
 	 * @return signed long value.
 	 */
 	public static long getByteNetOrder(byte[] theBytes,int idx,int size)
 	{
 		long sum = 0;
-		for (int i=0 ; i<size ; i++)
+		for (int i = 0; i < size; i++)
 		{
-			sum = sum*256 + (0xff & theBytes[i+idx]);
+			sum = sum * 256 + (0xff & theBytes[i+idx]);
 		}
 		return sum;
 	}
@@ -234,40 +234,40 @@ public class ByteUtils
 	/**
 	 * translate ip byte array to string
 	 * @param theBytes - the byte array
-	 * @param startidx - the start idx
+	 * @param startIndex - the start idx
 	 * @return the ip as string
 	 * @throws UnknownHostException
 	 */
-	public static String getAsIpv4AsString(byte[] theBytes,int startidx) throws UnknownHostException
+	public static String getAsIpv4AsString(byte[] theBytes,int startIndex) throws UnknownHostException
 	{
-		if (theBytes == null || theBytes.length - startidx > IPV4_ADDRESS_LEN)
+		if (theBytes == null || theBytes.length - startIndex > IPV4_ADDRESS_LEN)
 			throw new UnknownHostException();
-		String toReturn = "";
+		StringBuilder toReturn = new StringBuilder();
 		for (int i = 0; i < IPV4_ADDRESS_LEN; i++)
 		{
 			if (i!=0)
 			{
-				toReturn = toReturn + ".";
+				toReturn.append(".");
 			}
-			int field = (0xff & theBytes[i+startidx]);
-			toReturn = toReturn + (field);
+			int field = (0xff & theBytes[i+startIndex]);
+			toReturn.append(field);
 		}
-		return toReturn;		
+		return toReturn.toString();
 	}
 	
 	/**
 	 * turn ip in string representation to byte array in network order.
-	 * @param theIp
+	 * @param ipAddress string type address
 	 * @return ip as byte array
 	 * @throws UnknownHostException
 	 */
-	public static byte[] getIPV4NetwprkOrder(String theIp) throws UnknownHostException
+	public static byte[] getIPV4NetworkOrder(String ipAddress) throws UnknownHostException
 	{
 		byte[] toReturn = new byte[IPV4_ADDRESS_LEN];
 		
-		String[] fields = theIp.split("\\.");
+		String[] fields = ipAddress.split("\\.");
 		
-		if (fields == null || fields.length < IPV4_ADDRESS_LEN)
+		if (fields.length < IPV4_ADDRESS_LEN)
 			throw new UnknownHostException();
 		
 		for (int i = 0; i < fields.length; i++) {
@@ -279,73 +279,67 @@ public class ByteUtils
 	/**
 	 * put number in array (big endian way)
 	 * @param toPutIn - the array to put in
-	 * @param startidx - start index of the num
+	 * @param startIndex - start index of the num
 	 * @param theNumber - the number
 	 * @param len - the number size in bytes.
 	 */
-	public static void setBigIndianInBytesArray(byte[] toPutIn,int startidx,long theNumber,int len)
+	public static void setBigIndianInBytesArray(byte[] toPutIn,int startIndex,long theNumber,int len)
 	{
 		for(int i=0 ; i < len ; i++)
 		{
 			long num = (theNumber >> (8*(len - (i+1)))) & 0xff;
-			toPutIn[i+startidx] = (byte) num;
+			toPutIn[i+startIndex] = (byte) num;
 		}
 	}
 	
 	/**
 	 * put number in array (big endian way)
 	 * @param toPutIn - the array to put in
-	 * @param startidx - start index of the num
+	 * @param startIndex - start index of the num
 	 * @param theNumber - the number
 	 * @param len - the number size in bytes.
 	 */
-	public static void setLittleIndianInBytesArray(byte[] toPutIn,int startidx,long theNumber,int len)
+	public static void setLittleIndianInBytesArray(byte[] toPutIn,int startIndex,long theNumber,int len)
 	{
 		for(int i=0 ; i < len ; i++)
 		{
-			toPutIn[i+startidx] = (byte) (theNumber % 256);
-			theNumber/=256;			
+			toPutIn[i+startIndex] = (byte) (theNumber % 256);
+			theNumber/=256;
 		}
 	}
 	
 	/**
 	 * copy byte array from array.
-	 * @param from - the orginal array
-	 * @param stratidx - the start index
-	 * @param ln - the length of the tagert array.
-	 * @return - the slice copied fron the original array
+	 * @param from - the original array
+	 * @param stratIndex - the start index
+	 * @param ln - the length of the target array.
+	 * @return - the slice copied from the original array
 	 */
-	public static byte[] extractBytesArray(byte[] from,int stratidx,int ln)
+	public static byte[] extractBytesArray(byte[] from,int stratIndex,int ln)
 	{
 		byte[] toReturn = new byte[ln];
-		System.arraycopy(from,stratidx,toReturn,0,toReturn.length);
+		System.arraycopy(from,stratIndex,toReturn,0,toReturn.length);
 		return toReturn;
 	}
 		
 	/**
 	 * for switching big/small endian
-	 * @param num
+	 * @param num target number will be changed
 	 * @return flipped representation.
 	 */
 	public static long flip32(long num)
 	{
-		long tmp = num;
-		tmp = ((tmp & 0x000000FF) << 24) + ((tmp & 0x0000FF00) << 8) + ((tmp & 0x00FF0000) >> 8) + ((tmp & 0xFF000000) >> 24);
-
-		return tmp;
+		return ((num & 0x000000FF) << 24) + ((num & 0x0000FF00) << 8) + ((num & 0x00FF0000) >> 8) + ((num & 0xFF000000) >> 24);
 	}
 
 	/**
 	 * for switching big/small endian
-	 * @param num
-	 * @return filpped representation. 
+	 * @param num target number will be changed
+	 * @return flipped representation.
 	 */
 	public static int flip16(int num)
 	{
-		int tmp = num;
-
-		tmp = ((tmp & 0x00FF) << 8) + ((tmp & 0xFF00) >> 8);
-		return tmp;
+		return ((num & 0x00FF) << 8) + ((num & 0xFF00) >> 8);
 	}
 
 	/**
@@ -353,10 +347,10 @@ public class ByteUtils
 	 * @param data - the byte array to convert
 	 * @return converted byte array (not done in place).
 	 */
-	public static byte[] cobvertLittleToBig(final byte[] data)
+	public static byte[] convertLittleToBig(final byte[] data)
 	{
 		byte toRet[] = new byte[data.length];
-		for(int i=0 ; i<data.length ; i++)
+		for(int i=0 ; i < data.length ; i++)
 		{
 			toRet[i] = data[data.length-i-1];
 		}

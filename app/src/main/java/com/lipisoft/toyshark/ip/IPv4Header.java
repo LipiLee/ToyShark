@@ -38,7 +38,7 @@ public class IPv4Header {
 	private int totalLength = 0;
 	
 	//primarily used for uniquely identifying the group of fragments of a single IP datagram. 
-	private int idenfication = 0;
+	private int identification = 0;
 	
 	//3 bits field used to control or identify fragments.
 	//bit 0: Reserved; must be zero
@@ -74,7 +74,7 @@ public class IPv4Header {
 	 * @param dscpOrTypeOfService type of service
 	 * @param ecn Explicit Congestion Notification
 	 * @param totalLength total length of this packet including header and body in bytes (max 35535).
-	 * @param idenfication primarily used for uniquely identifying the group of fragments of a single IP datagram
+	 * @param identification primarily used for uniquely identifying the group of fragments of a single IP datagram
 	 * @param mayFragment bit number 1 of Flag. For DF (Don't Fragment)
 	 * @param lastFragment bit number 2 of Flag. For MF (More Fragment) 
 	 * @param fragmentOffset 13 bits long and specifies the offset of a particular fragment relative to the beginning of 
@@ -87,14 +87,15 @@ public class IPv4Header {
 	 * @param optionBytes optional field.
 	 */
 	public IPv4Header(byte ipVersion, byte internetHeaderLength, byte dscpOrTypeOfService, byte ecn,
-			int totalLength, int idenfication, boolean mayFragment,boolean lastFragment, short fragmentOffset,
-			byte timeToLive, byte protocol, int headerChecksum, int sourceIP, int destinationIP, byte[] optionBytes){
+					  int totalLength, int identification, boolean mayFragment, boolean lastFragment,
+					  short fragmentOffset, byte timeToLive, byte protocol, int headerChecksum,
+					  int sourceIP, int destinationIP, byte[] optionBytes){
 		this.ipVersion = ipVersion;
 		this.internetHeaderLength = internetHeaderLength;
 		this.dscpOrTypeOfService = dscpOrTypeOfService;
 		this.ecn = ecn;
 		this.totalLength = totalLength;
-		this.idenfication = idenfication;
+		this.identification = identification;
 		this.mayFragment = mayFragment;
 		if(mayFragment){
 			this.flag |= 0x40;
@@ -143,8 +144,8 @@ public class IPv4Header {
 		return (internetHeaderLength * 4);
 	}
 
-	public int getIdenfication() {
-		return idenfication;
+	public int getIdentification() {
+		return identification;
 	}
 
 	public byte getFlag() {
@@ -187,28 +188,12 @@ public class IPv4Header {
 		return optionBytes;
 	}
 
-	public void setInternetHeaderLength(byte internetHeaderLength) {
-		this.internetHeaderLength = internetHeaderLength;
-	}
-
-	public void setDscpOrTypeOfService(byte dscpOrTypeOfService) {
-		this.dscpOrTypeOfService = dscpOrTypeOfService;
-	}
-
-	public void setEcn(byte ecn) {
-		this.ecn = ecn;
-	}
-
 	public void setTotalLength(int totalLength) {
 		this.totalLength = totalLength;
 	}
 
-	public void setIdenfication(int idenfication) {
-		this.idenfication = idenfication;
-	}
-
-	public void setFlag(byte flag) {
-		this.flag = flag;
+	public void setIdentification(int identification) {
+		this.identification = identification;
 	}
 
 	public void setMayFragment(boolean mayFragment) {
@@ -220,31 +205,15 @@ public class IPv4Header {
 		}
 	}
 
-	public void setLastFragment(boolean lastFragment) {
-		this.lastFragment = lastFragment;
-		if(lastFragment){
-			this.flag |= 0x20;
-		}else{
-			this.flag &= 0xDF;
-		}
-	}
-
-	public void setFragmentOffset(short fragmentOffset) {
-		this.fragmentOffset = fragmentOffset;
-	}
-
-	public void setTimeToLive(byte timeToLive) {
-		this.timeToLive = timeToLive;
-	}
-
-	public void setProtocol(byte protocol) {
-		this.protocol = protocol;
-	}
-
-	public void setHeaderChecksum(int headerChecksum) {
-		this.headerChecksum = headerChecksum;
-	}
-
+//	public void setLastFragment(boolean lastFragment) {
+//		this.lastFragment = lastFragment;
+//		if(lastFragment){
+//			this.flag |= 0x20;
+//		}else{
+//			this.flag &= 0xDF;
+//		}
+//	}
+//
 	public void setSourceIP(int sourceIP) {
 		this.sourceIP = sourceIP;
 	}
@@ -252,13 +221,4 @@ public class IPv4Header {
 	public void setDestinationIP(int destinationIP) {
 		this.destinationIP = destinationIP;
 	}
-
-	public void setOptionBytes(byte[] optionBytes) {
-		this.optionBytes = optionBytes;
-	}
-
-
-
-	  
-	  
 }

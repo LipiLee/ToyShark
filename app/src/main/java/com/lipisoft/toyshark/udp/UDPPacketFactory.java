@@ -47,7 +47,7 @@ public class UDPPacketFactory {
 		ipheader.setMayFragment(false);
 		ipheader.setSourceIP(srcIp);
 		ipheader.setDestinationIP(destIp);
-		ipheader.setIdenfication(PacketUtil.getPacketId());
+		ipheader.setIdentification(PacketUtil.getPacketId());
 		
 		//ip's length is the length of the entire packet => IP header length + UDP header length (8) + UDP body length
 		int totallength = ipheader.getIPHeaderLength() + udplen;

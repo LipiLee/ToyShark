@@ -47,9 +47,9 @@ public class Session {
 	//for setting TCP/UDP header
 	private final Object syncLastHeader = new Object();
 	
-	private SocketChannel socketchannel = null;
+	private SocketChannel socketchannel;
 	
-	private DatagramChannel udpchannel = null;
+	private DatagramChannel udpChannel;
 	
 	private int destAddress = 0;
 	private int destPort = 0;
@@ -88,9 +88,9 @@ public class Session {
 	private boolean hasReceivedLastSegment = false;
 	
 	//last packet received from client
-	private IPv4Header lastIPheader = null;
-	private TCPHeader lastTCPheader = null;
-	private UDPHeader lastUDPheader = null;
+	private IPv4Header lastIpHeader;
+	private TCPHeader lastTcpHeader;
+	private UDPHeader lastUdpHeader;
 
 	//true when connection is about to be close
 	private boolean closingConnection = false;
@@ -113,7 +113,7 @@ public class Session {
 	//indicate that vpn client has sent FIN flag and it has been acked
 	private boolean ackedToFin = false;
 	//timestamp when FIN as been acked, this is used to removed session after n minute
-	private long ackedToFinTime = 0;
+//	private long ackedToFinTime = 0;
 	
 	//indicate that this session is currently being worked on by some SocketDataWorker already
 	private volatile boolean isbusyread = false;
@@ -135,23 +135,21 @@ public class Session {
 	 * track how many byte sent to client since last ACK to avoid overloading
 	 * @param amount Amount
 	 */
-	public void trackAmountSentSinceLastAck(int amount){
-		synchronized(syncSendAmount){
-			sendAmountSinceLastAck += amount;
-		}
-	}
+//	public void trackAmountSentSinceLastAck(int amount){
+//		synchronized(syncSendAmount){
+//			sendAmountSinceLastAck += amount;
+//		}
+//	}
 
 	/**
 	 * decrease value of sendAmountSinceLastAck so that client's window is not full
 	 * @param amount Amount
 	 */
-	void decreaseAmountSentSinceLastAck(int amount){
-		synchronized(syncSendAmount){
-			sendAmountSinceLastAck -= amount;
-			if(sendAmountSinceLastAck < 0){
-				Log.e(TAG, "Amount data to be decreased is over than its window.");
-				sendAmountSinceLastAck = 0;
-			}
+	synchronized void decreaseAmountSentSinceLastAck(int amount){
+		sendAmountSinceLastAck -= amount;
+		if(sendAmountSinceLastAck < 0){
+			Log.e(TAG, "Amount data to be decreased is over than its window.");
+			sendAmountSinceLastAck = 0;
 		}
 	}
 
@@ -169,38 +167,34 @@ public class Session {
 	 * @param data Data
 	 * @return boolean
 	 */
-	public boolean addReceivedData(byte[] data){
-		synchronized(syncReceive){
-			try {
-				receivingStream.write(data);
-			} catch (IOException e) {
-				return false;
-			}
+	public synchronized boolean addReceivedData(byte[] data){
+		try {
+			receivingStream.write(data);
+		} catch (IOException e) {
+			Log.e(TAG, e.toString());
 		}
 		return true;
 	}
 
-	public void resetReceivingData(){
-		synchronized(syncReceive){
-			receivingStream.reset();
-		}
-	}
+//	public void resetReceivingData(){
+//		synchronized(syncReceive){
+//			receivingStream.reset();
+//		}
+//	}
+
 	/**
 	 * get all data received in the buffer and empty it.
 	 * @return byte[]
 	 */
-	public byte[] getReceivedData(int maxSize){
-		byte[] data = null;
-		synchronized(syncReceive){
-			data = receivingStream.toByteArray();
-			receivingStream.reset();
-			if(data.length > maxSize){
-				byte[] small = new byte[maxSize];
-				System.arraycopy(data, 0, small, 0, maxSize);
-				int len = data.length - maxSize;
-				receivingStream.write(data, maxSize, len);
-				data = small;
-			}
+	public synchronized byte[] getReceivedData(int maxSize){
+		byte[] data = receivingStream.toByteArray();
+		receivingStream.reset();
+		if(data.length > maxSize){
+			byte[] small = new byte[maxSize];
+			System.arraycopy(data, 0, small, 0, maxSize);
+			int len = data.length - maxSize;
+			receivingStream.write(data, maxSize, len);
+			data = small;
 		}
 		return data;
 	}
@@ -213,11 +207,12 @@ public class Session {
 		return receivingStream.size() > 0;
 	}
 
-	public int getReceivedDataSize(){
-		synchronized(syncReceive){
-			return receivingStream.size();
-		}
-	}
+//	public int getReceivedDataSize(){
+//		synchronized(syncReceive){
+//			return receivingStream.size();
+//		}
+//	}
+
 	/**
 	 * set data to be sent to destination server
 	 * @param data Data to be sent
@@ -311,13 +306,13 @@ public class Session {
 		this.isConnected = isConnected;
 	}
 
-	public ByteArrayOutputStream getReceivingStream() {
-		return receivingStream;
-	}
+//	public ByteArrayOutputStream getReceivingStream() {
+//		return receivingStream;
+//	}
 
-	public ByteArrayOutputStream getSendingStream() {
-		return sendingStream;
-	}
+//	public ByteArrayOutputStream getSendingStream() {
+//		return sendingStream;
+//	}
 
 	public int getSourceIp() {
 		return sourceIp;
@@ -335,9 +330,9 @@ public class Session {
 		this.sourcePort = sourcePort;
 	}
 
-	public int getSendWindowSize() {
-		return sendWindowSize;
-	}
+//	public int getSendWindowSize() {
+//		return sendWindowSize;
+//	}
 
 	void setSendWindowSizeAndScale(int sendWindowSize, int sendWindowScale) {
 		this.sendWindowSize = sendWindowSize;
@@ -349,9 +344,9 @@ public class Session {
 		return sendWindowScale;
 	}
 
-	public boolean isAcked() {
-		return isacked;
-	}
+//	public boolean isAcked() {
+//		return isacked;
+//	}
 
 	void setAcked(boolean isacked) {
 		this.isacked = isacked;
@@ -365,19 +360,19 @@ public class Session {
 		this.recSequence = recSequence;
 	}
 
-	public SocketChannel getSocketchannel() {
+	public SocketChannel getSocketChannel() {
 		return socketchannel;
 	}
 
-	void setSocketchannel(SocketChannel socketchannel) {
+	void setSocketChannel(SocketChannel socketchannel) {
 		this.socketchannel = socketchannel;
 	}
 	
-	public DatagramChannel getUdpchannel() {
-		return udpchannel;
+	public DatagramChannel getUdpChannel() {
+		return udpChannel;
 	}
-	public void setUdpchannel(DatagramChannel udpchannel) {
-		this.udpchannel = udpchannel;
+	public void setUdpChannel(DatagramChannel udpChannel) {
+		this.udpChannel = udpChannel;
 	}
 	public boolean hasReceivedLastSegment() {
 		return hasReceivedLastSegment;
@@ -385,35 +380,35 @@ public class Session {
 	public void setHasReceivedLastSegment(boolean hasReceivedLastSegment) {
 		this.hasReceivedLastSegment = hasReceivedLastSegment;
 	}
-	public IPv4Header getLastIPheader() {
+	public IPv4Header getLastIpHeader() {
 		synchronized(syncLastHeader){
-			return lastIPheader;
+			return lastIpHeader;
 		}
 	}
-	void setLastIPheader(IPv4Header lastIPheader) {
+	void setLastIpHeader(IPv4Header lastIpHeader) {
 		synchronized(syncLastHeader){
-			this.lastIPheader = lastIPheader;
+			this.lastIpHeader = lastIpHeader;
 		}
 	}
-	public TCPHeader getLastTCPheader() {
+	public TCPHeader getLastTcpHeader() {
 		synchronized(syncLastHeader){
-			return lastTCPheader;
+			return lastTcpHeader;
 		}
 	}
-	void setLastTCPheader(TCPHeader lastTCPheader) {
+	void setLastTcpHeader(TCPHeader lastTcpHeader) {
 		synchronized(syncLastHeader){
-			this.lastTCPheader = lastTCPheader;
+			this.lastTcpHeader = lastTcpHeader;
 		}
 	}
 	
-	public UDPHeader getLastUDPheader() {
+	public UDPHeader getLastUdpHeader() {
 		synchronized(syncLastHeader){
-			return lastUDPheader;
+			return lastUdpHeader;
 		}
 	}
-	void setLastUDPheader(UDPHeader lastUDPheader) {
+	void setLastUdpHeader(UDPHeader lastUdpHeader) {
 		synchronized(syncLastHeader){
-			this.lastUDPheader = lastUDPheader;
+			this.lastUdpHeader = lastUdpHeader;
 		}
 	}
 	boolean isClosingConnection() {
@@ -428,22 +423,22 @@ public class Session {
 	void setDataForSendingReady(boolean isDataForSendingReady) {
 		this.isDataForSendingReady = isDataForSendingReady;
 	}
-	public byte[] getUnackData() {
-		return unackData;
-	}
+//	public byte[] getUnackData() {
+//		return unackData;
+//	}
 	public void setUnackData(byte[] unackData) {
 		this.unackData = unackData;
 	}
 	
-	public boolean isPacketCorrupted() {
-		return packetCorrupted;
-	}
+//	public boolean isPacketCorrupted() {
+//		return packetCorrupted;
+//	}
 	void setPacketCorrupted(boolean packetCorrupted) {
 		this.packetCorrupted = packetCorrupted;
 	}
-	public int getResendPacketCounter() {
-		return resendPacketCounter;
-	}
+//	public int getResendPacketCounter() {
+//		return resendPacketCounter;
+//	}
 	public void setResendPacketCounter(int resendPacketCounter) {
 		this.resendPacketCounter = resendPacketCounter;
 	}
@@ -462,15 +457,15 @@ public class Session {
 	boolean isAckedToFin() {
 		return ackedToFin;
 	}
-	public void setAckedToFin(boolean ackedToFin) {
-		this.ackedToFin = ackedToFin;
-	}
-	public long getAckedToFinTime() {
-		return ackedToFinTime;
-	}
-	public void setAckedToFinTime(long ackedToFinTime) {
-		this.ackedToFinTime = ackedToFinTime;
-	}
+//	public void setAckedToFin(boolean ackedToFin) {
+//		this.ackedToFin = ackedToFin;
+//	}
+//	public long getAckedToFinTime() {
+//		return ackedToFinTime;
+//	}
+//	public void setAckedToFinTime(long ackedToFinTime) {
+//		this.ackedToFinTime = ackedToFinTime;
+//	}
 	
 	public boolean isBusyread() {
 		return isbusyread;

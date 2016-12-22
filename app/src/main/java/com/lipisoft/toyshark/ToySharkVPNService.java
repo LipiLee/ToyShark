@@ -7,7 +7,6 @@ import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.net.VpnService;
 import android.os.Handler;
 import android.os.Message;
@@ -39,7 +38,6 @@ import java.util.Locale;
  */
 public class ToySharkVPNService extends VpnService implements Handler.Callback, Runnable, IProtectSocket, IReceivePacket{
     private static final String TAG = "ToySharkVPNService";
-    public static final String SERVICE_CLOSE_CMD_INTENT = "arovpndatacollector.service.close";
     private Handler mHandler;
     private Thread mThread;
     private ParcelFileDescriptor mInterface;
@@ -58,7 +56,6 @@ public class ToySharkVPNService extends VpnService implements Handler.Callback, 
     public int onStartCommand(Intent intent, int flags, int startId) {
 
         Log.d(TAG, "onStartCommand");
-        registerReceiver(serviceCloseCmdReceiver, new IntentFilter(ToySharkVPNService.SERVICE_CLOSE_CMD_INTENT));
         loadExtras(intent);
 
         try {
@@ -443,7 +440,7 @@ public class ToySharkVPNService extends VpnService implements Handler.Callback, 
         mInterface = builder.establish();
 
         if(mInterface != null){
-            Log.i(TAG, "\n\\\n  VPN Established:interface = " + mInterface.getFd() + "\n/\n");
+            Log.i(TAG, "VPN Established:interface = " + mInterface.getFd());
             return true;
         } else {
             Log.d(TAG,"mInterface is null");

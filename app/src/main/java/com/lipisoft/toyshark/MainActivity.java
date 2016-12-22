@@ -1,13 +1,28 @@
+/*
+ *  Copyright 2016 Lipi C.H. Lee
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
 package com.lipisoft.toyshark;
 
 import android.Manifest;
 import android.app.AlertDialog;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
+import android.net.Network;
 import android.net.NetworkInfo;
 import android.net.VpnService;
 import android.os.Bundle;
@@ -48,7 +63,6 @@ public class MainActivity extends AppCompatActivity {
     public static final int PACKET = 0;
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE = 0;
     Intent captureVpnServiceIntent;
-    private BroadcastReceiver analyzerCloseCmdReceiver = null;
     public static Handler mHandler;
     private TableLayout tableLayout;
     private int i = 0;
@@ -58,6 +72,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         checkRuntimePermission();
 
         mHandler = new Handler(Looper.getMainLooper()) {
@@ -77,18 +92,18 @@ public class MainActivity extends AppCompatActivity {
     void checkRuntimePermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
                 // TODO inform the user to ask runtime permission
-                ;
+                Log.d(TAG, "explains permission is needed.");
             } else {
                 ActivityCompat.requestPermissions(this,
-                        new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_WRITE_EXTERNAL_STORAGE);
+                        new String[]{ Manifest.permission.WRITE_EXTERNAL_STORAGE },
+                        REQUEST_WRITE_EXTERNAL_STORAGE);
             }
         } else
             if (networkAndAirplaneModeCheck())
                 startVPN();
-
-
     }
 
     @Override
@@ -106,9 +121,9 @@ public class MainActivity extends AppCompatActivity {
     void updateTableLayout(final Packet packet) {
         int color;
         packets.add(packet);
-        if (packet.getIpheader().getProtocol() == 6)
-            if (packet.getTcpheader().getDestinationPort() == 80 ||
-                    packet.getTcpheader().getSourcePort() == 80)
+        if (packet.getIpHeader().getProtocol() == 6)
+            if (packet.getTcpHeader().getDestinationPort() == 80 ||
+                    packet.getTcpHeader().getSourcePort() == 80)
                 color = 0xFFE4FFC7;
             else
                 color = 0xFFE7E6FF;
@@ -134,21 +149,21 @@ public class MainActivity extends AppCompatActivity {
 
         TextView sourceTextView = new TextView(this);
         sourceTextView.setPadding(10, 0, 10, 0);
-        sourceTextView.setText(PacketUtil.intToIPAddress(packet.getIpheader().getSourceIP()));
+        sourceTextView.setText(PacketUtil.intToIPAddress(packet.getIpHeader().getSourceIP()));
         sourceTextView.setBackgroundColor(color);
         sourceTextView.setTextColor(0xFF000000);
         tableRow.addView(sourceTextView);
 
         TextView destinationTextView = new TextView(this);
         destinationTextView.setPadding(10, 0, 10, 0);
-        destinationTextView.setText(PacketUtil.intToIPAddress(packet.getIpheader().getDestinationIP()));
+        destinationTextView.setText(PacketUtil.intToIPAddress(packet.getIpHeader().getDestinationIP()));
         destinationTextView.setBackgroundColor(color);
         destinationTextView.setTextColor(0xFF000000);
         tableRow.addView(destinationTextView);
 
         TextView protocolTextView = new TextView(this);
         protocolTextView.setPadding(10, 0, 10, 0);
-        if(packet.getIpheader().getProtocol() == 6)
+        if(packet.getIpHeader().getProtocol() == 6)
             protocolTextView.setText(R.string.tcp);
         else
             protocolTextView.setText(R.string.udp);
@@ -158,7 +173,10 @@ public class MainActivity extends AppCompatActivity {
 
         TextView lengthTextView = new TextView(this);
         lengthTextView.setPadding(10, 0, 10, 0);
-        lengthTextView.setText(String.valueOf(packet.getBuffer().length));
+        if (packet.getBuffer() == null)
+            lengthTextView.setText("0");
+        else
+            lengthTextView.setText(String.valueOf(packet.getBuffer().length));
         lengthTextView.setBackgroundColor(color);
         lengthTextView.setTextColor(0xFF000000);
         tableRow.addView(lengthTextView);
@@ -176,12 +194,11 @@ public class MainActivity extends AppCompatActivity {
         tableRow.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.d(TAG, "TableRow is selected");
                 TableRow selectedTableRow = (TableRow) v;
                 TextView noTextView = (TextView) selectedTableRow.getChildAt(0);
                 int index = Integer.valueOf(noTextView.getText().toString());
-                Packet packet1 = packets.get(index-1);
-                updatePacketDetailView(packet1);
+                Packet packet = packets.get(index-1);
+                updatePacketDetailView(packet);
             }
         });
 
@@ -193,14 +210,14 @@ public class MainActivity extends AppCompatActivity {
         List<Map<String, String>> groupList = new ArrayList<>();
         List<List<Map<String, String>>> childList = new ArrayList<>();
 
-        IPv4Header iPv4Header = packet.getIpheader();
+        IPv4Header iPv4Header = packet.getIpHeader();
         String src = PacketUtil.intToIPAddress(iPv4Header.getSourceIP());
         String dst = PacketUtil.intToIPAddress(iPv4Header.getDestinationIP());
         Map<String, String> ipGroupMap = new Hashtable<>();
         ipGroupMap.put(NAME, "Internet Protocol Version 4, Src: " + src + ", Dst: " + dst);
         groupList.add(ipGroupMap);
 
-        TCPHeader tcpHeader = packet.getTcpheader();
+        TCPHeader tcpHeader = packet.getTcpHeader();
         int len = packet.getBuffer().length - iPv4Header.getIPHeaderLength() - tcpHeader.getTCPHeaderLength();
         Map<String, String> tcpGroupMap = new Hashtable<>();
         tcpGroupMap.put(NAME, "Transmission Control Protocol, Src Port: " +
@@ -229,7 +246,7 @@ public class MainActivity extends AppCompatActivity {
         ipChildList.add(totalLengthMap);
 
         Map<String, String> identificationMap = new HashMap<>();
-        identificationMap.put(NAME, "Identification: " + iPv4Header.getIdenfication());
+        identificationMap.put(NAME, "Identification: " + iPv4Header.getIdentification());
         ipChildList.add(identificationMap);
 
         byte[] flag = {iPv4Header.getFlag()};
@@ -294,36 +311,38 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private String makeTCPinfo(Packet packet) {
-        TCPHeader tcpHeader = packet.getTcpheader();
-        StringBuilder stringBuilder = new StringBuilder(tcpHeader.getSourcePort() + "->" +
-                tcpHeader.getDestinationPort() + " [");
+    private String makeTcpInfo(Packet packet) {
+        TCPHeader tcpHeader = packet.getTcpHeader();
+        StringBuilder tcpInfo = new StringBuilder(tcpHeader.getSourcePort());
+        tcpInfo.append("->").append(tcpHeader.getDestinationPort()).append(" [");
         if (tcpHeader.isSYN())
-            stringBuilder.append("SYN");
+            tcpInfo.append("SYN");
         if (tcpHeader.isACK())
-            stringBuilder.append("ACK");
+            tcpInfo.append("ACK");
         if (tcpHeader.isFIN())
-            stringBuilder.append("FIN");
+            tcpInfo.append("FIN");
         if (tcpHeader.isRST())
-            stringBuilder.append("RST");
+            tcpInfo.append("RST");
 
-        stringBuilder.append("] ");
+        tcpInfo.append("] ");
 
-        if (tcpHeader.isSYN())
-            stringBuilder.append("Seq=" + tcpHeader.getSequenceNumber() + " ");
-        if (tcpHeader.isACK())
-            stringBuilder.append("Ack=" + tcpHeader.getAckNumber() + " ");
+        if (tcpHeader.isSYN()) {
+            tcpInfo.append("Seq=").append(tcpHeader.getSequenceNumber()).append(" ");
+        }
+        if (tcpHeader.isACK()) {
+            tcpInfo.append("Ack=").append(tcpHeader.getAckNumber()).append(" ");
+        }
 
-        stringBuilder.append("Win=" + tcpHeader.getWindowSize() + " ");
-        int length = packet.getBuffer().length - packet.getIpheader().getIPHeaderLength() - packet.getTcpheader().getTCPHeaderLength();
-        stringBuilder.append("Len=" + length);
+        tcpInfo.append("Win=").append(tcpHeader.getWindowSize()).append(" ");
+        int length = packet.getBuffer().length - packet.getIpHeader().getIPHeaderLength() - packet.getTcpHeader().getTCPHeaderLength();
+        tcpInfo.append("Len=").append(length);
 
-        return stringBuilder.toString();
+        return tcpInfo.toString();
     }
 
     private String makeInfo(Packet packet) {
-        int protocol = packet.getIpheader().getProtocol();
-        if (protocol == 6) return makeTCPinfo(packet);
+        int protocol = packet.getIpHeader().getProtocol();
+        if (protocol == 6) return makeTcpInfo(packet);
 
         return null;
     }
@@ -332,8 +351,6 @@ public class MainActivity extends AppCompatActivity {
      * Launch intent for user approval of VPN connection
      */
     private void startVPN() {
-        Log.i(TAG, "startVPN()");
-
         // check for VPN already running
         try {
             if (!checkForActiveInterface("tun0")) {
@@ -362,11 +379,10 @@ public class MainActivity extends AppCompatActivity {
      * @throws Exception
      */
     private boolean checkForActiveInterface(String networkInterfaceName) throws Exception {
-
         List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
-        for (NetworkInterface intf : interfaces) {
-            if (intf.getName().equals(networkInterfaceName)) {
-                return intf.isUp();
+        for (NetworkInterface networkInterface : interfaces) {
+            if (networkInterface.getName().equals(networkInterfaceName)) {
+                return networkInterface.isUp();
             }
         }
         return false;
@@ -374,7 +390,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        Log.i(TAG, "onActivityResult(... resultCode{" + resultCode + "} ...)");
+        Log.i(TAG, "onActivityResult(resultCode:  "+ resultCode + ")");
         if (resultCode == RESULT_OK) {
             captureVpnServiceIntent = new Intent(getApplicationContext(), ToySharkVPNService.class);
             captureVpnServiceIntent.putExtra("TRACE_DIR", Environment.getExternalStorageDirectory().getPath() + "/ARO");
@@ -424,58 +440,27 @@ public class MainActivity extends AppCompatActivity {
                     }
                 })
                 .show();
-
     }
 
     @Override
     protected void onDestroy() {
-        Log.d(TAG, "onDestroy()");
-        if (analyzerCloseCmdReceiver != null) {
-            Log.d(TAG, "calling unregisterAnalyzerCloseCmdReceiver inside onDestroy()");
-            unregisterAnalyzerCloseCmdReceiver();
-        }
-
         super.onDestroy();
     }
 
     @Override
     protected void onPause() {
-        Log.d(TAG, "onPause()");
-        if (analyzerCloseCmdReceiver != null) {
-            Log.d(TAG, "calling unregisterAnalyzerCloseCmdReceiver inside onPause()");
-            unregisterAnalyzerCloseCmdReceiver();
-        }
         super.onPause();
     }
 
     @Override
     protected void onStop() {
         Log.i(TAG, "onStop()");
-        // TODO Auto-generated method stub
         super.onStop();
-    }
-
-    /**
-     * do not need broadcastReceiver anymore so unregister it!
-     */
-    private void unregisterAnalyzerCloseCmdReceiver() {
-        Log.d(TAG, "inside unregisterAnalyzerCloseCmdReceiver");
-        try {
-            if (analyzerCloseCmdReceiver != null) {
-                unregisterReceiver(analyzerCloseCmdReceiver);
-                analyzerCloseCmdReceiver = null;
-
-                Log.d(TAG, "successfully unregistered analyzerCloseCmdReceiver");
-            }
-        } catch (Exception e) {
-            Log.d(TAG, "Ignoring exception in analyzerCloseCmdReceiver", e);
-        }
     }
 
     @Override
     protected void onResume() {
         Log.i(TAG, "onResume");
-
         super.onResume();
     }
 
@@ -485,37 +470,30 @@ public class MainActivity extends AppCompatActivity {
         super.onBackPressed();
     }
 
-    /**
-     * @return boolean
+    /** check whether network is connected or not
+     *  @return boolean
      */
     private boolean isConnectedToInternet() {
         ConnectivityManager connectivity = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         if (connectivity != null) {
-            NetworkInfo[] networkInfos = connectivity.getAllNetworkInfo();
-            if (networkInfos != null)
-                for (NetworkInfo networkInfo: networkInfos) {
-                    Log.i(TAG, "NETWORK CONNECTION : " + networkInfo.getState() + " Connected STATE :" + NetworkInfo.State.CONNECTED);
-                    if (networkInfo.getState().equals(NetworkInfo.State.CONNECTED)) {
-                        return true;
-                    }
+            for(Network network : connectivity.getAllNetworks()) {
+                NetworkInfo networkInfo = connectivity.getNetworkInfo(network);
+                if (networkInfo.getState().equals(NetworkInfo.State.CONNECTED)) {
+                    return true;
                 }
-
+            }
         }
         return false;
     }
 
     private boolean networkAndAirplaneModeCheck() {
-        String title = "ARO";
+        String title = "ToyShark";
 
         if (!isConnectedToInternet()) {
             String message = "No network connection in your phone, Connect to network and start again";
-            //popup dialog
             showInfoDialog(title, message);
             return false;
         }
-
         return true;
-
     }
-
 }

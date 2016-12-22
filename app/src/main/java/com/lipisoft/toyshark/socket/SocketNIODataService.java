@@ -1,6 +1,5 @@
 package com.lipisoft.toyshark.socket;
 
-
 import android.util.Log;
 
 import com.lipisoft.toyshark.IClientPacketWriter;
@@ -29,11 +28,11 @@ import java.util.concurrent.TimeUnit;
 
 public class SocketNIODataService implements Runnable {
 	public static final String TAG = "SocketNIODataService";
-	public static Object syncSelector = new Object();
-	public static Object syncSelector2 = new Object();
+	public static final Object syncSelector = new Object();
+	public static final Object syncSelector2 = new Object();
 
 	SessionManager sessionmg;
-	int printcount = 0;
+//	int printcount = 0;
 	private IClientPacketWriter writer;
 	private TCPPacketFactory factory;
 	private UDPPacketFactory udpfactory;
@@ -126,7 +125,7 @@ public class SocketNIODataService implements Runnable {
 				Log.d(TAG,"selector: connecting to remote UDP server: "+ips+":"+port);
 				try{
 					channel = channel.connect(addr);
-					sess.setUdpchannel(channel);
+					sess.setUdpChannel(channel);
 					sess.setConnected(channel.isConnected());
 					
 				}catch(ClosedChannelException ex){

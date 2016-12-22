@@ -46,6 +46,7 @@ public class TCPHeader {
 	private boolean isSelectiveAckPermitted = false;
 	private int timeStampSender = 0;
 	private int timeStampReplyTo = 0;
+
 	TCPHeader(int sourcePort,int destinationPort,int sequenceNumber,
 						int dataOffset, boolean isns,int tcpFlags,int windowSize,int checksum,
 							int urgentPointer,byte[] options,int ackNumber){

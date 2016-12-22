@@ -25,24 +25,23 @@ import com.lipisoft.toyshark.tcp.TCPHeader;
  * Date: May 27, 2014
  */
 public class Packet {
-
-	private IPv4Header ipheader;
+	private IPv4Header ipHeader;
 	private TCPHeader tcpheader;
 	private byte[] buffer;
 	
-	public IPv4Header getIpheader() {
-		return ipheader;
+	public IPv4Header getIpHeader() {
+		return ipHeader;
 	}
 
-	public void setIpheader(IPv4Header ipheader) {
-		this.ipheader = ipheader;
+	public void setIpHeader(IPv4Header ipHeader) {
+		this.ipHeader = ipHeader;
 	}
 
-	TCPHeader getTcpheader() {
+	TCPHeader getTcpHeader() {
 		return tcpheader;
 	}
 
-	public void setTcpheader(TCPHeader tcpheader) {
+	public void setTcpHeader(TCPHeader tcpheader) {
 		this.tcpheader = tcpheader;
 	}
 
@@ -60,7 +59,7 @@ public class Packet {
 
 	public int getPacketBodyLength(){
 		if(buffer != null)
-			return buffer.length - tcpheader.getTCPHeaderLength() + ipheader.getIPHeaderLength();
+			return buffer.length - tcpheader.getTCPHeaderLength() + ipHeader.getIPHeaderLength();
 		return 0;
 	}
 
@@ -70,7 +69,7 @@ public class Packet {
 	 */
 	public byte[] getPacketBody(){
 		if(buffer != null){
-			int offset = tcpheader.getTCPHeaderLength() - ipheader.getIPHeaderLength();
+			int offset = tcpheader.getTCPHeaderLength() - ipHeader.getIPHeaderLength();
 			int len = buffer.length - offset;
 			if(len > 0){
 				byte[] data = new byte[len];

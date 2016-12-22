@@ -254,7 +254,7 @@ public class PacketUtil {
 		StringBuilder str = new StringBuilder();
 		str.append("\r\nIP Version: "+ipheader.getIpVersion());
     	str.append("\r\nProtocol: "+ipheader.getProtocol());
-    	str.append("\r\nID# "+ipheader.getIdenfication());
+    	str.append("\r\nID# "+ipheader.getIdentification());
     	str.append("\r\nIP Total Length: "+ipheader.getTotalLength());
     	str.append("\r\nIP Header length: "+ipheader.getIPHeaderLength());
     	str.append("\r\nIP checksum: "+ipheader.getHeaderChecksum());
@@ -277,7 +277,7 @@ public class PacketUtil {
     	StringBuffer str = new StringBuffer();
     	str.append("\r\nIP Version: "+ipheader.getIpVersion());
     	str.append("\r\nProtocol: "+ipheader.getProtocol());
-    	str.append("\r\nID# "+ipheader.getIdenfication());
+    	str.append("\r\nID# "+ipheader.getIdentification());
     	str.append("\r\nTotal Length: "+ipheader.getTotalLength());
     	str.append("\r\nData Length: "+packetbodylength);
 		str.append("\r\nDest: "+intToIPAddress(ipheader.getDestinationIP())+":"+tcpheader.getDestinationPort());

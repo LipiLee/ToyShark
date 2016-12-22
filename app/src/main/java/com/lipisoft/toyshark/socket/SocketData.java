@@ -15,8 +15,6 @@
 */
 package com.lipisoft.toyshark.socket;
 
-import android.util.Log;
-
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -27,10 +25,7 @@ import java.util.Queue;
  * Date: May 12, 2014
  */
 public class SocketData {
-    private static final String TAG = "SocketData";
-
 	private static final Object syncObj = new Object();
-	private static final Object syncData = new Object();
 	private volatile static SocketData instance = null;
 	private Queue<byte[]> data;
 
@@ -49,19 +44,11 @@ public class SocketData {
 		data = new LinkedList<>();
 	}
 
-	public void addData(byte[] packet) {
-		synchronized(syncData){
-			try {
-				data.add(packet);
-			} catch(IllegalStateException e) {
-				Log.e(TAG, e.toString());
-            }
-		}
+	public synchronized void addData(byte[] packet) {
+		data.add(packet);
 	}
 
-	public byte[] getData() {
-		synchronized(syncData) {
+	public synchronized byte[] getData() {
 			return data.poll();
-		}
 	}
 }//end class

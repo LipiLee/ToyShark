@@ -35,12 +35,9 @@ import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.nio.channels.UnresolvedAddressException;
-import java.nio.channels.UnsupportedAddressTypeException;
 import java.util.Collection;
 import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.Map;
 
 /**
  * Manage in-memory storage for VPN client session.
@@ -49,15 +46,15 @@ import java.util.Set;
  */
 public class SessionManager {
 	public static final String TAG = "SessionManager";
-	private static Object syncObj = new Object();
-	private static volatile SessionManager instance = null;
-	private Hashtable<String, Session> table = null;
-	private static Object syncTable = new Object();
-	private SocketProtector protector = null;
+	private static final Object syncObj = new Object();
+	private static volatile SessionManager instance;
+	private Map<String, Session> table;
+	private static final Object syncTable = new Object();
+	private SocketProtector protector;
 	private Selector selector;
 
 	private SessionManager() {
-		table = new Hashtable<String,Session>(10);
+		table = new Hashtable<>();
 		protector = SocketProtector.getInstance();
 		try {
 			selector = Selector.open();
@@ -69,9 +66,8 @@ public class SessionManager {
 	public static SessionManager getInstance(){
 		if(instance == null){
 			synchronized(syncObj){
-				if(instance == null){
+				if(instance == null)
 					instance = new SessionManager();
-				}
 			}
 		}
 		return instance;
@@ -95,9 +91,9 @@ public class SessionManager {
 		}
 	}
 
-	public Iterator<Session> getAllSession(){
-		return table.values().iterator();
-	}
+//	public Iterator<Session> getAllSession(){
+//		return table.values().iterator();
+//	}
 
 	int addClientUDPData(IPv4Header ip, UDPHeader udp, byte[] buffer, Session session){
 		int start = ip.getIPHeaderLength() + 8;
@@ -154,7 +150,7 @@ public class SessionManager {
 		synchronized(syncTable){
 			Collection<Session> sessions = table.values();
 			for (Session session: sessions) {
-				if(session.getUdpchannel() == channel)
+				if(session.getUdpChannel() == channel)
 					return session;
 			}
 		}
@@ -164,25 +160,27 @@ public class SessionManager {
 		synchronized(syncTable){
 			Collection<Session> sessions = table.values();
 			for (Session session: sessions) {
-				if(session.getSocketchannel() == channel) {
+				if(session.getSocketChannel() == channel) {
 					return session;
 				}
 			}
 		}
 		return null;
 	}
-	public void removeSessionByChannel(SocketChannel channel){
-		synchronized (syncTable) {
-			Set<String> keys = table.keySet();
-			for (String key: keys) {
-				Session session = table.get(key);
-				if(session != null && session.getSocketchannel() == channel) {
-					table.remove(key);
-					Log.d(TAG, "closed session -> " + key);
-				}
-			}
-		}
-	}
+
+//	public void removeSessionByChannel(SocketChannel channel){
+//		synchronized (syncTable) {
+//			Set<String> keys = table.keySet();
+//			for (String key: keys) {
+//				Session session = table.get(key);
+//				if(session != null && session.getSocketChannel() == channel) {
+//					table.remove(key);
+//					Log.d(TAG, "closed session -> " + key);
+//				}
+//			}
+//		}
+//	}
+
 	/**
 	 * remove session from memory, then close socket connection.
 	 * @param ip Destination IP Address
@@ -198,7 +196,7 @@ public class SessionManager {
 		}
 		if(session != null){
 			try {
-				SocketChannel chan = session.getSocketchannel();
+				SocketChannel chan = session.getSocketChannel();
 				if(chan != null)
 					chan.close();
 			} catch (IOException e) {
@@ -218,7 +216,7 @@ public class SessionManager {
 			table.remove(key);
 		}
 		try {
-			SocketChannel chan = session.getSocketchannel();
+			SocketChannel chan = session.getSocketChannel();
 			if(chan != null)
 				chan.close();
 		} catch (IOException e) {
@@ -268,14 +266,6 @@ public class SessionManager {
 		try{
 			channel.connect(addr);
 			session.setConnected(channel.isConnected());
-		}catch(ClosedChannelException e){
-			e.printStackTrace();
-		}catch(UnresolvedAddressException e){
-			e.printStackTrace();
-		}catch(UnsupportedAddressTypeException e){
-			e.printStackTrace();
-		}catch(SecurityException e){
-			e.printStackTrace();
 		}catch(IOException e){
 			e.printStackTrace();
 		}
@@ -302,7 +292,7 @@ public class SessionManager {
 			return null;
 		}
 		
-		session.setUdpchannel(channel);
+		session.setUdpChannel(channel);
 		
 		synchronized(syncTable){
 			if(!table.containsKey(keys)){
@@ -363,15 +353,6 @@ public class SessionManager {
 		boolean connected = false;
 		try{
 			connected = channel.connect(addr);
-			
-		} catch(ClosedChannelException e) {
-			Log.e(TAG, e.toString());
-		} catch(UnresolvedAddressException e) {
-			Log.e(TAG, e.toString());
-		} catch(UnsupportedAddressTypeException e) {
-			Log.e(TAG, e.toString());
-		} catch(SecurityException e) {
-			Log.e(TAG, e.toString());
 		} catch(IOException e) {
 			Log.e(TAG, e.toString());
 		}
@@ -394,7 +375,7 @@ public class SessionManager {
 			return null;
 		}
 		
-		ses.setSocketchannel(channel);
+		ses.setSocketChannel(channel);
 		
 		synchronized(syncTable){
 			if(!table.containsKey(keys)){
