@@ -16,6 +16,9 @@
 
 package com.lipisoft.toyshark.ip;
 
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+
 /**
  * Data structure for IPv4 header as defined in RFC 791.
  * @author Borey Sao
@@ -65,6 +68,7 @@ public class IPv4Header {
 	
 	private int destinationIP;
 
+	@Nullable
 	private byte[] optionBytes;
 	
 	/**
@@ -86,10 +90,13 @@ public class IPv4Header {
 	 * @param destinationIP IPv4 address of receiver.
 	 * @param optionBytes optional field.
 	 */
-	public IPv4Header(byte ipVersion, byte internetHeaderLength, byte dscpOrTypeOfService, byte ecn,
-					  int totalLength, int identification, boolean mayFragment, boolean lastFragment,
-					  short fragmentOffset, byte timeToLive, byte protocol, int headerChecksum,
-					  int sourceIP, int destinationIP, byte[] optionBytes){
+	public IPv4Header(byte ipVersion, byte internetHeaderLength,
+					  byte dscpOrTypeOfService, byte ecn, int totalLength,
+					  int identification, boolean mayFragment,
+					  boolean lastFragment, short fragmentOffset,
+					  byte timeToLive, byte protocol, int headerChecksum,
+					  int sourceIP, int destinationIP,
+					  @Nullable byte[] optionBytes){
 		this.ipVersion = ipVersion;
 		this.internetHeaderLength = internetHeaderLength;
 		this.dscpOrTypeOfService = dscpOrTypeOfService;
@@ -184,7 +191,7 @@ public class IPv4Header {
 		return destinationIP;
 	}
 
-	byte[] getOptionBytes() {
+	@Nullable byte[] getOptionBytes() {
 		return optionBytes;
 	}
 

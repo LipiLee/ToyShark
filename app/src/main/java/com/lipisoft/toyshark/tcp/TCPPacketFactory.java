@@ -39,9 +39,13 @@ public class TCPPacketFactory {
 	public static final String TAG = "TCPPacketFactory";
 	
 	private TCPHeader copyTCPHeader(TCPHeader tcpheader){
-		TCPHeader tcp = new TCPHeader(tcpheader.getSourcePort(), tcpheader.getDestinationPort(), tcpheader.getSequenceNumber(), 
-				tcpheader.getDataOffset(), tcpheader.isNS(), tcpheader.getTcpFlags(), tcpheader.getWindowSize(), 
-				tcpheader.getChecksum(), tcpheader.getUrgentPointer(), tcpheader.getOptions(), tcpheader.getAckNumber());
+		TCPHeader tcp = new TCPHeader(tcpheader.getSourcePort(),
+				tcpheader.getDestinationPort(), tcpheader.getSequenceNumber(),
+				tcpheader.getDataOffset(), tcpheader.isNS(),
+				tcpheader.getTcpFlags(), tcpheader.getWindowSize(),
+				tcpheader.getChecksum(), tcpheader.getUrgentPointer(),
+				tcpheader.getOptions(), tcpheader.getAckNumber());
+
 		tcp.setMaxSegmentSize(65535);//tcpheader.getMaxSegmentSize());
 		tcp.setWindowScale(tcpheader.getWindowScale());
 		tcp.setSelectiveAckPermitted(tcpheader.isSelectiveAckPermitted());
@@ -49,18 +53,20 @@ public class TCPPacketFactory {
 		tcp.setTimeStampReplyTo(tcpheader.getTimeStampReplyTo());
 		return tcp;
 	}
+
 	/**
 	 * create FIN-ACK for sending to client
-	 * @param ipheader IP Header
-	 * @param tcpheader TCP Header
+	 * @param iPv4Header IP Header
+	 * @param tcpHeader TCP Header
 	 * @param ackToClient acknowledge
 	 * @param seqToClient sequence
 	 * @return byte[]
 	 */
-	public byte[] createFinAckData(IPv4Header ipheader, TCPHeader tcpheader,
-								   int ackToClient, int seqToClient, boolean isfin, boolean isack){
-		IPv4Header ip = IPPacketFactory.copyIPv4Header(ipheader);
-		TCPHeader tcp = copyTCPHeader(tcpheader);
+	public byte[] createFinAckData(IPv4Header iPv4Header, TCPHeader tcpHeader,
+								   int ackToClient, int seqToClient,
+								   boolean isFin, boolean isAck){
+		IPv4Header ip = IPPacketFactory.copyIPv4Header(iPv4Header);
+		TCPHeader tcp = copyTCPHeader(tcpHeader);
 		
 		//flip IP from source to dest and vice-versa
 		int sourceIp = ip.getDestinationIP();
@@ -79,16 +85,16 @@ public class TCPPacketFactory {
 		ip.setIdentification(PacketUtil.getPacketId());
 		
 		//ACK
-		tcp.setIsACK(isack);
+		tcp.setIsACK(isAck);
 		tcp.setIsSYN(false);
 		tcp.setIsPSH(false);
-		tcp.setIsFIN(isfin);
+		tcp.setIsFIN(isFin);
 		
 		//set response timestamps in options fields
 		tcp.setTimeStampReplyTo(tcp.getTimeStampSender());
-		Date currentdate = new Date();
-		int sendertimestamp = (int)currentdate.getTime();
-		tcp.setTimeStampSender(sendertimestamp);
+		Date currentDate = new Date();
+		int senderTimestamp = (int)currentDate.getTime();
+		tcp.setTimeStampSender(senderTimestamp);
 		
 		//recalculate IP length
 		int totalLength = ip.getIPHeaderLength() + tcp.getTCPHeaderLength();

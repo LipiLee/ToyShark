@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Enumeration;
 
+import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.lipisoft.toyshark.ip.IPv4Header;
@@ -37,21 +38,26 @@ import com.lipisoft.toyshark.udp.UDPHeader;
  * Date: May 8, 2014
  */
 public class PacketUtil {
-	public static final String TAG = "PacketUtil";
+	private static final String TAG = "PacketUtil";
 	private volatile static boolean enabledDebugLog = false;
-	private volatile static int packetid = 0;
+	private volatile static int packetId = 0;
+
 	public synchronized static int getPacketId(){
-		return packetid++;
+		return packetId++;
 	}
+
 	public static boolean isEnabledDebugLog(){
 		return enabledDebugLog;
 	}
+
 	public static void setEnabledDebugLog(boolean yes){
 		enabledDebugLog = yes;
 	}
+
 	public static void Debug(String str){
-		Log.d(TAG,str);
+		Log.d(TAG, str);
 	}
+
 	/**
 	 * convert int to byte array
 	 * @param value int value 32 bits
@@ -67,6 +73,7 @@ public class PacketUtil {
 		buffer[offset + 2] = (byte)((value >> 8)&0x000000FF);
 		buffer[offset + 3] = (byte)(value & 0x000000FF);
 	}
+
 	/**
 	 * convert short to byte array
 	 * @param value short value to convert
@@ -80,6 +87,7 @@ public class PacketUtil {
 		buffer[offset] = (byte)((value >> 8)&0x00FF);
 		buffer[offset + 1] = (byte)(value & 0x00FF);
 	}
+
 	/**
 	 * extract short value from a byte array using Big Endian byte order
 	 * @param buffer array of byte
@@ -93,20 +101,22 @@ public class PacketUtil {
 		value |= buffer[start+1] & 0xFF;
 		return value;
 	}
+
 	/**
 	 * convert array of byte to int
 	 * @param buffer byte array
-	 * @param start Starting point
-	 * @param length Length
+	 * @param start Starting point to be read in byte array
+	 * @param length Length to be read
 	 * @return value of int
 	 */
-	public static int getNetworkInt(byte[] buffer, int start, int length){
-		int value = 0x00000000;
-		int end = start + (length > 4 ? 4: length);
+	public static int getNetworkInt(@NonNull byte[] buffer, int start, int length){
+		int value = 0;
+		int end = start + (length > 4 ? 4 : length);
+
 		if(end > buffer.length)
 			end = buffer.length;
 
-		for(int i = start; i < end; i++){
+		for(int i = start; i < end; i++) {
 			value |= buffer[i] & 0xFF;
 			if(i < (end - 1))
 				value <<= 8;
@@ -114,18 +124,19 @@ public class PacketUtil {
 
 		return value;
 	}
+
 	/**
 	 * validate TCP header checksum
 	 * @param source Source Port
 	 * @param destination Destination Port
 	 * @param data Payload
-	 * @param tcplength TCP Header length
-	 * @param tcpoffset
+	 * @param tcpLength TCP Header length
+	 * @param tcpOffset
 	 * @return boolean
 	 */
 	public static boolean isValidTCPChecksum(int source, int destination,
-											 byte[] data, short tcplength, int tcpoffset){
-		int buffersize = tcplength + 12;
+											 byte[] data, short tcpLength, int tcpOffset){
+		int buffersize = tcpLength + 12;
 		boolean isodd = false;
 		if((buffersize % 2) != 0){
 			buffersize++;
@@ -137,16 +148,17 @@ public class PacketUtil {
 		buffer.putInt(destination);
 		buffer.put((byte)0);//reserved => 0
 		buffer.put((byte)6);//TCP protocol => 6
-		buffer.putShort(tcplength);
-		buffer.put(data, tcpoffset, tcplength);
+		buffer.putShort(tcpLength);
+		buffer.put(data, tcpOffset, tcpLength);
 		if(isodd){
 			buffer.put((byte)0);
 		}
 		return isValidIPChecksum(buffer.array(), buffersize);
 	}
+
 	/**
 	 * validate IP Header checksum
-	 * @param data
+	 * @param data byte stream
 	 * @param length
 	 * @return boolean
 	 */
@@ -169,6 +181,7 @@ public class PacketUtil {
 
 		return buffer.getShort(2) == 0;
 	}
+
 	public static byte[] calculateChecksum(byte[] data, int offset, int length){
 		int start = offset;
 		int sum = 0;
@@ -190,6 +203,7 @@ public class PacketUtil {
 		
 		return checksum;
 	}
+
 	public static byte[] calculateTCPHeaderChecksum(byte[] data, int offset, int tcplength, int destip, int sourceip){
 		int buffersize = tcplength + 12;
 		boolean odd = false;
@@ -217,95 +231,109 @@ public class PacketUtil {
 		byte[] tcparray = buffer.array();
 		return calculateChecksum(tcparray, 0, buffersize);
 	}
+
 	public static String intToIPAddress(int addressInt)
 	{
-	    StringBuffer buffer = new StringBuffer(16);
-	    buffer.append((addressInt >>> 24) & 0x000000FF).append(".").
-	           append((addressInt >>> 16) & 0x000000FF).append(".").
-	           append((addressInt >>> 8) & 0x000000FF).append(".").
-	           append(addressInt & 0x000000FF);
+		StringBuilder stringBuilder = new StringBuilder()
+				.append((addressInt >>> 24) & 0x000000FF).append(".")
+				.append((addressInt >>> 16) & 0x000000FF).append(".")
+				.append((addressInt >>> 8) & 0x000000FF).append(".")
+				.append(addressInt & 0x000000FF);
 
-	    return buffer.toString();
+		return stringBuilder.toString();
 	}
+
 	/**
 	 * get IP address of device
 	 * @return IP Address
 	 */
 	public static String getLocalIpAddress() {
-	    try {
+		try {
 			Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces();
-	        while (en.hasMoreElements()) {
-	            NetworkInterface intf = en.nextElement();
-				if (!intf.getDisplayName().equals("tun0")) {
-					Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses();
-					while (enumIpAddr.hasMoreElements()) {
-						InetAddress inetAddress = enumIpAddr.nextElement();
+			while (en.hasMoreElements()) {
+				NetworkInterface networkInterface = en.nextElement();
+				if (!networkInterface.getDisplayName().equals("tun0")) {
+					Enumeration<InetAddress> addresses = networkInterface.getInetAddresses();
+					while (addresses.hasMoreElements()) {
+						InetAddress inetAddress = addresses.nextElement();
 						if (!inetAddress.isLoopbackAddress() && inetAddress instanceof Inet4Address)
 							return inetAddress.getHostAddress();
 					}
 				}
-	        }
-	    } catch (SocketException ex) {
-	        ex.printStackTrace();
-	    }
-	    return null;
+			}
+		} catch (SocketException ex) {
+			ex.printStackTrace();
+		}
+
+		return null;
 	}
+
 	public static String getUDPoutput(IPv4Header ipheader, UDPHeader udp){
-		StringBuilder str = new StringBuilder();
-		str.append("\r\nIP Version: "+ipheader.getIpVersion());
-    	str.append("\r\nProtocol: "+ipheader.getProtocol());
-    	str.append("\r\nID# "+ipheader.getIdentification());
-    	str.append("\r\nIP Total Length: "+ipheader.getTotalLength());
-    	str.append("\r\nIP Header length: "+ipheader.getIPHeaderLength());
-    	str.append("\r\nIP checksum: "+ipheader.getHeaderChecksum());
-    	str.append("\r\nMay fragement? "+ipheader.isMayFragment());
-    	str.append("\r\nLast fragment? "+ipheader.isLastFragment());
-    	str.append("\r\nFlag: "+ipheader.getFlag());
-    	str.append("\r\nFragment Offset: "+ipheader.getFragmentOffset());
-    	str.append("\r\nDest: "+intToIPAddress(ipheader.getDestinationIP())+":"+udp.getDestinationPort());
-    	str.append("\r\nSrc: "+intToIPAddress(ipheader.getSourceIP())+":"+udp.getSourcePort());
-    	str.append("\r\nUDP Length: "+udp.getLength());
-    	str.append("\r\nUDP Checksum: "+udp.getChecksum());
-		return str.toString();
+		return "\r\nIP Version: " + ipheader.getIpVersion() +
+				"\r\nProtocol: " + ipheader.getProtocol() +
+				"\r\nID# " + ipheader.getIdentification() +
+				"\r\nIP Total Length: " + ipheader.getTotalLength() +
+				"\r\nIP Header length: " + ipheader.getIPHeaderLength() +
+				"\r\nIP checksum: " + ipheader.getHeaderChecksum() +
+				"\r\nMay fragement? " + ipheader.isMayFragment() +
+				"\r\nLast fragment? " + ipheader.isLastFragment() +
+				"\r\nFlag: " + ipheader.getFlag() +
+				"\r\nFragment Offset: " + ipheader.getFragmentOffset() +
+				"\r\nDest: " + intToIPAddress(ipheader.getDestinationIP()) +
+						":" + udp.getDestinationPort() +
+				"\r\nSrc: " + intToIPAddress(ipheader.getSourceIP()) +
+						":" + udp.getSourcePort() +
+				"\r\nUDP Length: " + udp.getLength() +
+				"\r\nUDP Checksum: " + udp.getChecksum();
 	}
-	public static String getOutput(IPv4Header ipheader, TCPHeader tcpheader, byte[] packetdata){
-		short tcplength = (short)(packetdata.length - ipheader.getIPHeaderLength());
-		boolean isvalidchecksum = PacketUtil.isValidTCPChecksum(ipheader.getSourceIP(),ipheader.getDestinationIP(),
-				packetdata,tcplength,ipheader.getIPHeaderLength());
-		boolean isvalidIPChecsum = PacketUtil.isValidIPChecksum(packetdata, ipheader.getIPHeaderLength());
-		int packetbodylength = packetdata.length - ipheader.getIPHeaderLength() - tcpheader.getTCPHeaderLength();
-    	StringBuffer str = new StringBuffer();
-    	str.append("\r\nIP Version: "+ipheader.getIpVersion());
-    	str.append("\r\nProtocol: "+ipheader.getProtocol());
-    	str.append("\r\nID# "+ipheader.getIdentification());
-    	str.append("\r\nTotal Length: "+ipheader.getTotalLength());
-    	str.append("\r\nData Length: "+packetbodylength);
-		str.append("\r\nDest: "+intToIPAddress(ipheader.getDestinationIP())+":"+tcpheader.getDestinationPort());
-    	str.append("\r\nSrc: "+intToIPAddress(ipheader.getSourceIP())+":"+tcpheader.getSourcePort());
-    	str.append("\r\nACK: "+tcpheader.getAckNumber());
-    	str.append("\r\nSeq: "+tcpheader.getSequenceNumber());
-    	str.append("\r\nIP Header length: "+ipheader.getIPHeaderLength());
-    	str.append("\r\nTCP Header length: "+tcpheader.getTCPHeaderLength());
-    	str.append("\r\nACK: "+tcpheader.isACK());
-    	str.append("\r\nSYN: "+tcpheader.isSYN());
-    	str.append("\r\nCWR: "+tcpheader.isCWR());
-    	str.append("\r\nECE: "+ tcpheader.isECE());
-    	str.append("\r\nFIN: "+tcpheader.isFIN());
-    	str.append("\r\nNS: "+tcpheader.isNS());
-    	str.append("\r\nPSH: "+tcpheader.isPSH());
-    	str.append("\r\nRST: "+tcpheader.isRST());
-    	str.append("\r\nURG: "+tcpheader.isURG());
-    	str.append("\r\nIP checksum: "+ipheader.getHeaderChecksum());
-    	str.append("\r\nIs Valid IP Checksum: "+isvalidIPChecsum);
-    	str.append("\r\nTCP Checksum: "+tcpheader.getChecksum());
-    	str.append("\r\nIs Valid TCP checksum: "+isvalidchecksum);
-    	str.append("\r\nMay fragement? "+ipheader.isMayFragment());
-    	str.append("\r\nLast fragment? "+ipheader.isLastFragment());
-    	str.append("\r\nFlag: "+ipheader.getFlag());
-    	str.append("\r\nFragment Offset: "+ipheader.getFragmentOffset());
-    	str.append("\r\nWindow: "+tcpheader.getWindowSize());
-    	str.append("\r\nWindow scale: "+tcpheader.getWindowScale());
-    	str.append("\r\nData Offset: "+tcpheader.getDataOffset());
+
+	public static String getOutput(IPv4Header ipHeader, TCPHeader tcpheader,
+								   byte[] packetData) {
+		short tcpLength = (short)(packetData.length -
+				ipHeader.getIPHeaderLength());
+		boolean isValidChecksum = PacketUtil.isValidTCPChecksum(
+				ipHeader.getSourceIP(), ipHeader.getDestinationIP(),
+				packetData, tcpLength, ipHeader.getIPHeaderLength());
+		boolean isValidIPChecksum = PacketUtil.isValidIPChecksum(packetData,
+				ipHeader.getIPHeaderLength());
+		int packetBodyLength = packetData.length - ipHeader.getIPHeaderLength()
+				- tcpheader.getTCPHeaderLength();
+
+		StringBuilder str = new StringBuilder("\r\nIP Version: ")
+		.append(ipHeader.getIpVersion())
+		.append("\r\nProtocol: ").append(ipHeader.getProtocol())
+		.append("\r\nID# ").append(ipHeader.getIdentification())
+		.append("\r\nTotal Length: ").append(ipHeader.getTotalLength())
+		.append("\r\nData Length: ").append(packetBodyLength)
+		.append("\r\nDest: ").append(intToIPAddress(ipHeader.getDestinationIP()))
+				.append(":").append(tcpheader.getDestinationPort())
+		.append("\r\nSrc: ").append(intToIPAddress(ipHeader.getSourceIP()))
+				.append(":").append(tcpheader.getSourcePort())
+		.append("\r\nACK: ").append(tcpheader.getAckNumber())
+		.append("\r\nSeq: ").append(tcpheader.getSequenceNumber())
+		.append("\r\nIP Header length: ").append(ipHeader.getIPHeaderLength())
+		.append("\r\nTCP Header length: ").append(tcpheader.getTCPHeaderLength())
+		.append("\r\nACK: ").append(tcpheader.isACK())
+		.append("\r\nSYN: ").append(tcpheader.isSYN())
+		.append("\r\nCWR: ").append(tcpheader.isCWR())
+		.append("\r\nECE: ").append(tcpheader.isECE())
+		.append("\r\nFIN: ").append(tcpheader.isFIN())
+		.append("\r\nNS: ").append(tcpheader.isNS())
+		.append("\r\nPSH: ").append(tcpheader.isPSH())
+		.append("\r\nRST: ").append(tcpheader.isRST())
+		.append("\r\nURG: ").append(tcpheader.isURG())
+    	.append("\r\nIP checksum: ").append(ipHeader.getHeaderChecksum())
+    	.append("\r\nIs Valid IP Checksum: ").append(isValidIPChecksum)
+    	.append("\r\nTCP Checksum: ").append(tcpheader.getChecksum())
+    	.append("\r\nIs Valid TCP checksum: ").append(isValidChecksum)
+    	.append("\r\nMay fragement? ").append(ipHeader.isMayFragment())
+    	.append("\r\nLast fragment? ").append(ipHeader.isLastFragment())
+    	.append("\r\nFlag: ").append(ipHeader.getFlag())
+    	.append("\r\nFragment Offset: ").append(ipHeader.getFragmentOffset())
+    	.append("\r\nWindow: ").append(tcpheader.getWindowSize())
+    	.append("\r\nWindow scale: ").append(tcpheader.getWindowScale())
+    	.append("\r\nData Offset: ").append(tcpheader.getDataOffset());
+
     	if(tcpheader.getOptions().length > 0){
     		str.append("\r\nTCP Options: \r\n..........");
     		byte[] options = tcpheader.getOptions();
@@ -318,13 +346,13 @@ public class PacketUtil {
     				str.append("\r\n...NOP");
     			}else if(kind == 2){
     				i += 2;
-    				int segsize = PacketUtil.getNetworkInt(options, i, 2);
+    				int maxSegmentSize = PacketUtil.getNetworkInt(options, i, 2);
     				i++;
-    				str.append("\r\n...Max Seg Size: "+segsize);
+    				str.append("\r\n...Max Seg Size: ").append(maxSegmentSize);
     			}else if(kind == 3){
     				i += 2;
-    				int windowsize = PacketUtil.getNetworkInt(options, i, 1);
-    				str.append("\r\n...Window Scale: "+windowsize);
+    				int windowSize = PacketUtil.getNetworkInt(options, i, 1);
+    				str.append("\r\n...Window Scale: ").append(windowSize);
     			}else if(kind == 4){
     				i++;
     				str.append("\r\n...Selective Ack");
@@ -333,11 +361,12 @@ public class PacketUtil {
     				str.append("\r\n...selective ACK (SACK)");
     			}else if(kind == 8){
     				i += 2;
-    				int tttt = PacketUtil.getNetworkInt(options, i, 4);
+    				int timeStampValue = PacketUtil.getNetworkInt(options, i, 4);
     				i += 4;
-    				int eeee = PacketUtil.getNetworkInt(options, i, 4);
+    				int timeStampEchoReply = PacketUtil.getNetworkInt(options, i, 4);
     				i += 3;
-    				str.append("\r\n...Timestamp: "+tttt+"-"+eeee);
+    				str.append("\r\n...Timestamp: ").append(timeStampValue)
+							.append("-").append(timeStampEchoReply);
     			}else if(kind == 14){
     				i +=2;
     				str.append("\r\n...Alternative Checksum request");
@@ -345,19 +374,21 @@ public class PacketUtil {
     				i = i + options[++i] - 2;
     				str.append("\r\n...TCP Alternate Checksum Data");
     			}else{
-    				str.append("\r\n... unknown option# "+kind +", int: "+(int)kind);
+    				str.append("\r\n... unknown option# ").append(kind)
+							.append(", int: ").append((int)kind);
     			}
     		}
     	}
     	return str.toString();
 	}
+
 	/**
 	 * detect packet corruption flag in tcp options sent from client ACK
-	 * @param tcpheader
-	 * @return
+	 * @param tcpHeader TCPHeader
+	 * @return boolean
 	 */
-	public static boolean isPacketCorrupted(TCPHeader tcpheader){
-		byte[] options = tcpheader.getOptions();
+	public static boolean isPacketCorrupted(@NonNull TCPHeader tcpHeader){
+		byte[] options = tcpHeader.getOptions();
 		byte kind;
 
 		for(int i = 0; i < options.length; i++){
@@ -376,22 +407,23 @@ public class PacketUtil {
 			}else if(kind == 23){
 				return true;
 			}else{
-				//Log.e(SessionHandler.TAG,"unknown option: "+kind);
+				Log.e(TAG,"unknown option: " + kind);
 			}
 		}
 		return false;
 	}
+
 	public static String bytesToStringArray(byte[] bytes) {
-		StringBuilder str = new StringBuilder();
-		str.append("{");
-	    for(int i =0;i<bytes.length;i++){
-	    	if(i == 0){
-	    		str.append(bytes[i]);
-	    	}else{
-	    		str.append(","+bytes[i]);
-	    	}
-	    }
-	    str.append("}");
-	    return str.toString();
+		StringBuilder str = new StringBuilder("{ ");
+
+		for (int i = 0; i < bytes.length; i++) {
+			if(i == 0)
+				str.append(bytes[i]);
+			else
+				str.append(", ").append(bytes[i]);
+		}
+		str.append(" }");
+
+		return str.toString();
 	}
 }//end class
