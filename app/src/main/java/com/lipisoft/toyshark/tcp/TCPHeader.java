@@ -14,6 +14,9 @@
  * limitations under the License.
 */
 package com.lipisoft.toyshark.tcp;
+
+import android.support.annotation.Nullable;
+
 /**
  * data structure for TCP Header
  * @author Borey Sao
@@ -38,7 +41,7 @@ public class TCPHeader {
 	private int windowSize;
 	private int checksum;
 	private int urgentPointer;
-	private byte[] options;
+	@Nullable private byte[] options;
 	private int ackNumber;
 	//vars below need to be set via setters when copy
 	private int maxSegmentSize = 0;
@@ -48,8 +51,9 @@ public class TCPHeader {
 	private int timeStampReplyTo = 0;
 
 	TCPHeader(int sourcePort,int destinationPort,int sequenceNumber,
-						int dataOffset, boolean isns,int tcpFlags,int windowSize,int checksum,
-							int urgentPointer,byte[] options,int ackNumber){
+			  int dataOffset, boolean isns,int tcpFlags,
+			  int windowSize,int checksum, int urgentPointer,
+			  @Nullable byte[] options,int ackNumber){
 		this.sourcePort = sourcePort;
 		this.destinationPort = destinationPort;
 		this.sequenceNumber = sequenceNumber;
@@ -222,10 +226,10 @@ public class TCPHeader {
 	public void setUrgentPointer(int urgentPointer) {
 		this.urgentPointer = urgentPointer;
 	}
-	public byte[] getOptions() {
+	@Nullable public byte[] getOptions() {
 		return options;
 	}
-	void setOptions(byte[] options) {
+	void setOptions(@Nullable byte[] options) {
 		this.options = options;
 	}
 	public int getAckNumber() {

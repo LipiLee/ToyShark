@@ -134,9 +134,10 @@ public class TCPPacketFactory {
 		tcp.setIsURG(false);
 		
 		//remove any option field
-		byte[] options = new byte[0];
-		tcp.setOptions(options);
-		
+//		byte[] options = new byte[0];
+//		tcp.setOptions(options);
+		tcp.setOptions(null);
+
 		//window size should be zero
 		tcp.setWindowSize(0);
 		
@@ -193,9 +194,10 @@ public class TCPPacketFactory {
 		tcp.setIsURG(false);
 		
 		//remove any option field
-		byte[] options = new byte[0];
-		tcp.setOptions(options);
-		
+//		byte[] options = new byte[0];
+//		tcp.setOptions(options);
+		tcp.setOptions(null);
+
 		//window size should be zero
 		tcp.setWindowSize(0);
 		
@@ -400,87 +402,68 @@ public class TCPPacketFactory {
 		return buffer;
 	}
 	
-	
 	/**
 	 * create array of byte from a given TCPHeader object
 	 * @param header instance of TCPHeader
 	 * @return array of byte
 	 */
 	private byte[] createTCPHeaderData(TCPHeader header){
-		byte[] buffer = new byte[header.getTCPHeaderLength()];
-		byte sourcePort1 = (byte)(header.getSourcePort() >> 8);
-		byte sourcePort2 = (byte)(header.getSourcePort());
-		
-		buffer[0] = sourcePort1;
-		buffer[1] = sourcePort2;
-		
-		byte destPort1 = (byte)(header.getDestinationPort() >> 8);
-		byte destPort2 = (byte)(header.getDestinationPort());
-		buffer[2] = destPort1;
-		buffer[3] = destPort2;
-		ByteBuffer buf = ByteBuffer.allocate(4);
-		buf.order(ByteOrder.BIG_ENDIAN);
-		buf.putInt(header.getSequenceNumber());
+		final byte[] buffer = new byte[header.getTCPHeaderLength()];
+		buffer[0] = (byte)(header.getSourcePort() >> 8);
+		buffer[1] = (byte)(header.getSourcePort());
+		buffer[2] = (byte)(header.getDestinationPort() >> 8);
+		buffer[3] = (byte)(header.getDestinationPort());
+
+		final ByteBuffer sequenceNumber = ByteBuffer.allocate(4);
+		sequenceNumber.order(ByteOrder.BIG_ENDIAN);
+		sequenceNumber.putInt(header.getSequenceNumber());
 		
 		//sequence number
-		System.arraycopy(buf.array(), 0, buffer, 4, 4);
+		System.arraycopy(sequenceNumber.array(), 0, buffer, 4, 4);
+
+		final ByteBuffer ackNumber = ByteBuffer.allocate(4);
+		ackNumber.order(ByteOrder.BIG_ENDIAN);
+		ackNumber.putInt(header.getAckNumber());
+		System.arraycopy(ackNumber.array(), 0, buffer, 8, 4);
 		
-		buf.clear();
-		buf.putInt(header.getAckNumber());
-		System.arraycopy(buf.array(), 0, buffer, 8, 4);
-		
-		byte dataoffset = (byte)header.getDataOffset();
-		dataoffset <<= 4;
-		//set NS flag
-		if(header.isNS()){
-			dataoffset |= 0x1;
-		}
-		buffer[12] = dataoffset;
-		
-		byte flag = (byte)header.getTcpFlags();
-		buffer[13] = flag;
-		
-		byte window1 = (byte)(header.getWindowSize() >> 8);
-		byte window2 = (byte)header.getWindowSize();
-		buffer[14] = window1;
-		buffer[15] = window2;
-		
-		byte checksum1 = (byte)(header.getChecksum() >> 8);
-		byte checksum2 = (byte)header.getChecksum();
-		buffer[16] = checksum1;
-		buffer[17] = checksum2;
-		
-		byte urgpointer1 = (byte)(header.getUrgentPointer() >> 8);
-		byte urgpointer2 = (byte)header.getUrgentPointer();
-		buffer[18] = urgpointer1;
-		buffer[19] = urgpointer2;
-		
+		buffer[12] = (byte) (header.isNS() ? (header.getDataOffset() << 4) | 0x1
+				: header.getDataOffset() << 4);
+		buffer[13] = (byte)header.getTcpFlags();
+
+		buffer[14] = (byte)(header.getWindowSize() >> 8);
+		buffer[15] = (byte)header.getWindowSize();
+
+		buffer[16] = (byte)(header.getChecksum() >> 8);
+		buffer[17] = (byte)header.getChecksum();
+
+		buffer[18] = (byte)(header.getUrgentPointer() >> 8);
+		buffer[19] = (byte)header.getUrgentPointer();
+
 		//set timestamp for both sender and reply to
-		byte[] options = header.getOptions();
-		byte kind;
-		byte len;
-		int timeSender = header.getTimeStampSender();
-		int timeReplyto = header.getTimeStampReplyTo();
-		for(int i =0;i<options.length;i++){
-			kind = options[i];
-			if(kind > 1){
-				if(kind == 8){//timestamp
-					i += 2;
-					if((i + 7) < options.length){
-						PacketUtil.writeIntToBytes(timeSender, options, i);
-						i += 4;
-						PacketUtil.writeIntToBytes(timeReplyto, options, i);
+		final byte[] options = header.getOptions();
+		if (options != null) {
+			for (int i = 0; i < options.length; i++) {
+				final byte kind = options[i];
+				if (kind > 1) {
+					if (kind == 8) {//timestamp
+						i += 2;
+						if ((i + 7) < options.length) {
+							PacketUtil.writeIntToBytes(header.getTimeStampSender(), options, i);
+							i += 4;
+							PacketUtil.writeIntToBytes(header.getTimeStampReplyTo(), options, i);
+						}
+						break;
+					} else if ((i + 1) < options.length) {
+						final byte len = options[i + 1];
+						i = i + len - 1;
 					}
-					break;
-				}else if((i+1) < options.length){
-					len = options[i+1];
-					i = i + len - 1;
 				}
 			}
+			if (options.length > 0) {
+				System.arraycopy(options, 0, buffer, 20, options.length);
+			}
 		}
-		if(header.getOptions().length > 0){
-			System.arraycopy(header.getOptions(), 0, buffer, 20, header.getOptions().length);
-		}
+
 		return buffer;
 	}
 	/**
@@ -529,37 +512,38 @@ public class TCPPacketFactory {
 		return head;
 	}
 	private void extractOptionData(TCPHeader head){
-		byte[] options = head.getOptions();
-		byte kind;
-		for(int i = 0; i < options.length; i++){
-			kind = options[i];
-			if(kind == 2){
-				i +=2;
-				int segSize = PacketUtil.getNetworkInt(options, i, 2);
-				head.setMaxSegmentSize(segSize);
-				i++;
-			}else if(kind == 3){
-				i += 2;
-				int scale = PacketUtil.getNetworkInt(options, i, 1);
-				head.setWindowScale(scale);
-			}else if(kind == 4){
-				i++;
-				head.setSelectiveAckPermitted(true);
-			}else if(kind == 5){//SACK => selective acknowledgment
-				i++;
-				int sackLength = PacketUtil.getNetworkInt(options, i, 1);
-				i = i + (sackLength - 2);
-				//case 10, 18, 26 and 34
-				//TODO: handle missing segments
-				//rare case => low priority
-			}else if(kind == 8){//timestamp and echo of previous timestamp
-				i += 2;
-				int timestampSender = PacketUtil.getNetworkInt(options, i, 4);
-				i += 4;
-				int timestampReplyTo = PacketUtil.getNetworkInt(options, i, 4);
-				i += 3;
-				head.setTimeStampSender(timestampSender);
-				head.setTimeStampReplyTo(timestampReplyTo);
+		final byte[] options = head.getOptions();
+		if (options != null) {
+			for (int i = 0; i < options.length; i++) {
+				final byte kind = options[i];
+				if (kind == 2) {
+					i += 2;
+					int segSize = PacketUtil.getNetworkInt(options, i, 2);
+					head.setMaxSegmentSize(segSize);
+					i++;
+				} else if (kind == 3) {
+					i += 2;
+					int scale = PacketUtil.getNetworkInt(options, i, 1);
+					head.setWindowScale(scale);
+				} else if (kind == 4) {
+					i++;
+					head.setSelectiveAckPermitted(true);
+				} else if (kind == 5) {//SACK => selective acknowledgment
+					i++;
+					int sackLength = PacketUtil.getNetworkInt(options, i, 1);
+					i = i + (sackLength - 2);
+					//case 10, 18, 26 and 34
+					//TODO: handle missing segments
+					//rare case => low priority
+				} else if (kind == 8) {//timestamp and echo of previous timestamp
+					i += 2;
+					int timestampSender = PacketUtil.getNetworkInt(options, i, 4);
+					i += 4;
+					int timestampReplyTo = PacketUtil.getNetworkInt(options, i, 4);
+					i += 3;
+					head.setTimeStampSender(timestampSender);
+					head.setTimeStampReplyTo(timestampReplyTo);
+				}
 			}
 		}
 	}

@@ -39,23 +39,10 @@ import com.lipisoft.toyshark.udp.UDPHeader;
  */
 public class PacketUtil {
 	private static final String TAG = "PacketUtil";
-	private volatile static boolean enabledDebugLog = false;
 	private volatile static int packetId = 0;
 
 	public synchronized static int getPacketId(){
 		return packetId++;
-	}
-
-	public static boolean isEnabledDebugLog(){
-		return enabledDebugLog;
-	}
-
-	public static void setEnabledDebugLog(boolean yes){
-		enabledDebugLog = yes;
-	}
-
-	public static void Debug(String str){
-		Log.d(TAG, str);
 	}
 
 	/**
@@ -169,7 +156,7 @@ public class PacketUtil {
 			sum += PacketUtil.getNetworkInt(data, start, 2);
 			start = start + 2;
 		}
-		
+
 		//carry over one's complement
 		while((sum >> 16) > 0)
 			sum = (sum & 0xffff) + (sum >> 16);
@@ -195,12 +182,12 @@ public class PacketUtil {
 		}
 		//flip the bit to get one' complement
 		sum = ~sum;
-		
+
 		//extract the last two byte of int
 		byte[] checksum = new byte[2];
 		checksum[0] = (byte)(sum >> 8);
 		checksum[1] = (byte)sum;
-		
+
 		return checksum;
 	}
 
@@ -213,17 +200,17 @@ public class PacketUtil {
 		}
 		ByteBuffer buffer = ByteBuffer.allocate(buffersize);
 		buffer.order(ByteOrder.BIG_ENDIAN);
-		
+
 		//create virtual header
 		buffer.putInt(sourceip);
 		buffer.putInt(destip);
 		buffer.put((byte)0);//reserved => 0
 		buffer.put((byte)6);//tcp protocol => 6
 		buffer.putShort((short)tcplength);
-		
+
 		//add actual header + data
 		buffer.put(data, offset, tcplength);
-		
+
 		//padding last byte to zero
 		if(odd){
 			buffer.put((byte)0);
@@ -322,64 +309,63 @@ public class PacketUtil {
 		.append("\r\nPSH: ").append(tcpheader.isPSH())
 		.append("\r\nRST: ").append(tcpheader.isRST())
 		.append("\r\nURG: ").append(tcpheader.isURG())
-    	.append("\r\nIP checksum: ").append(ipHeader.getHeaderChecksum())
-    	.append("\r\nIs Valid IP Checksum: ").append(isValidIPChecksum)
-    	.append("\r\nTCP Checksum: ").append(tcpheader.getChecksum())
-    	.append("\r\nIs Valid TCP checksum: ").append(isValidChecksum)
-    	.append("\r\nMay fragement? ").append(ipHeader.isMayFragment())
-    	.append("\r\nLast fragment? ").append(ipHeader.isLastFragment())
-    	.append("\r\nFlag: ").append(ipHeader.getFlag())
-    	.append("\r\nFragment Offset: ").append(ipHeader.getFragmentOffset())
-    	.append("\r\nWindow: ").append(tcpheader.getWindowSize())
-    	.append("\r\nWindow scale: ").append(tcpheader.getWindowScale())
-    	.append("\r\nData Offset: ").append(tcpheader.getDataOffset());
+		.append("\r\nIP checksum: ").append(ipHeader.getHeaderChecksum())
+		.append("\r\nIs Valid IP Checksum: ").append(isValidIPChecksum)
+		.append("\r\nTCP Checksum: ").append(tcpheader.getChecksum())
+		.append("\r\nIs Valid TCP checksum: ").append(isValidChecksum)
+		.append("\r\nMay fragement? ").append(ipHeader.isMayFragment())
+		.append("\r\nLast fragment? ").append(ipHeader.isLastFragment())
+		.append("\r\nFlag: ").append(ipHeader.getFlag())
+		.append("\r\nFragment Offset: ").append(ipHeader.getFragmentOffset())
+		.append("\r\nWindow: ").append(tcpheader.getWindowSize())
+		.append("\r\nWindow scale: ").append(tcpheader.getWindowScale())
+		.append("\r\nData Offset: ").append(tcpheader.getDataOffset());
 
-    	if(tcpheader.getOptions().length > 0){
-    		str.append("\r\nTCP Options: \r\n..........");
-    		byte[] options = tcpheader.getOptions();
-    		byte kind;
-    		for(int i=0;i<options.length;i++){
-    			kind = options[i];
-    			if(kind == 0){
-    				str.append("\r\n...End of options list");
-    			}else if(kind == 1){
-    				str.append("\r\n...NOP");
-    			}else if(kind == 2){
-    				i += 2;
-    				int maxSegmentSize = PacketUtil.getNetworkInt(options, i, 2);
-    				i++;
-    				str.append("\r\n...Max Seg Size: ").append(maxSegmentSize);
-    			}else if(kind == 3){
-    				i += 2;
-    				int windowSize = PacketUtil.getNetworkInt(options, i, 1);
-    				str.append("\r\n...Window Scale: ").append(windowSize);
-    			}else if(kind == 4){
-    				i++;
-    				str.append("\r\n...Selective Ack");
-    			}else if(kind == 5){
-    				i = i + options[++i] - 2;
-    				str.append("\r\n...selective ACK (SACK)");
-    			}else if(kind == 8){
-    				i += 2;
-    				int timeStampValue = PacketUtil.getNetworkInt(options, i, 4);
-    				i += 4;
-    				int timeStampEchoReply = PacketUtil.getNetworkInt(options, i, 4);
-    				i += 3;
-    				str.append("\r\n...Timestamp: ").append(timeStampValue)
+		final byte[] options =  tcpheader.getOptions();
+		if (options != null){
+			str.append("\r\nTCP Options: \r\n..........");
+			for (int i = 0; i < options.length ; i++) {
+				final byte kind = options[i];
+				if(kind == 0){
+					str.append("\r\n...End of options list");
+				}else if(kind == 1){
+					str.append("\r\n...NOP");
+				}else if(kind == 2){
+					i += 2;
+					int maxSegmentSize = PacketUtil.getNetworkInt(options, i, 2);
+					i++;
+					str.append("\r\n...Max Seg Size: ").append(maxSegmentSize);
+				}else if(kind == 3){
+					i += 2;
+					int windowSize = PacketUtil.getNetworkInt(options, i, 1);
+					str.append("\r\n...Window Scale: ").append(windowSize);
+				}else if(kind == 4){
+					i++;
+					str.append("\r\n...Selective Ack");
+				}else if(kind == 5){
+					i = i + options[++i] - 2;
+					str.append("\r\n...selective ACK (SACK)");
+				}else if(kind == 8){
+					i += 2;
+					int timeStampValue = PacketUtil.getNetworkInt(options, i, 4);
+					i += 4;
+					int timeStampEchoReply = PacketUtil.getNetworkInt(options, i, 4);
+					i += 3;
+					str.append("\r\n...Timestamp: ").append(timeStampValue)
 							.append("-").append(timeStampEchoReply);
-    			}else if(kind == 14){
-    				i +=2;
-    				str.append("\r\n...Alternative Checksum request");
-    			}else if(kind == 15){
-    				i = i + options[++i] - 2;
-    				str.append("\r\n...TCP Alternate Checksum Data");
-    			}else{
-    				str.append("\r\n... unknown option# ").append(kind)
+				}else if(kind == 14){
+					i +=2;
+					str.append("\r\n...Alternative Checksum request");
+				}else if(kind == 15){
+					i = i + options[++i] - 2;
+					str.append("\r\n...TCP Alternate Checksum Data");
+				}else{
+					str.append("\r\n... unknown option# ").append(kind)
 							.append(", int: ").append((int)kind);
-    			}
-    		}
-    	}
-    	return str.toString();
+				}
+			}
+		}
+		return str.toString();
 	}
 
 	/**
@@ -388,26 +374,27 @@ public class PacketUtil {
 	 * @return boolean
 	 */
 	public static boolean isPacketCorrupted(@NonNull TCPHeader tcpHeader){
-		byte[] options = tcpHeader.getOptions();
-		byte kind;
+		final byte[] options = tcpHeader.getOptions();
 
-		for(int i = 0; i < options.length; i++){
-			kind = options[i];
-			if(kind == 0 || kind == 1){
-			}else if(kind == 2){
-				i += 3;
-			}else if(kind == 3 || kind == 14){
-				i += 2;
-			}else if(kind == 4){
-				i++;
-			}else if(kind == 5 || kind == 15){
-				i = i + options[++i] - 2;
-			}else if(kind == 8){
-				i += 9;
-			}else if(kind == 23){
-				return true;
-			}else{
-				Log.e(TAG,"unknown option: " + kind);
+		if (options != null) {
+			for (int i = 0; i < options.length; i++) {
+				final byte kind = options[i];
+				if (kind == 0 || kind == 1) {
+				} else if (kind == 2) {
+					i += 3;
+				} else if (kind == 3 || kind == 14) {
+					i += 2;
+				} else if (kind == 4) {
+					i++;
+				} else if (kind == 5 || kind == 15) {
+					i = i + options[++i] - 2;
+				} else if (kind == 8) {
+					i += 9;
+				} else if (kind == 23) {
+					return true;
+				} else {
+					Log.e(TAG, "unknown option: " + kind);
+				}
 			}
 		}
 		return false;

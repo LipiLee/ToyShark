@@ -72,7 +72,7 @@ public class IPPacketFactory {
 		buffer[10] = (byte) (header.getHeaderChecksum() >> 8);
 		buffer[11] = (byte)header.getHeaderChecksum();
 
-		ByteBuffer buf = ByteBuffer.allocate(8);
+		final ByteBuffer buf = ByteBuffer.allocate(8);
 
 		buf.order(ByteOrder.BIG_ENDIAN);
 		buf.putInt(0,header.getSourceIP());
@@ -83,8 +83,8 @@ public class IPPacketFactory {
 		//destination ip address
 		System.arraycopy(buf.array(), 4, buffer, 16, 4);
 
-		byte[] optionBytes = header.getOptionBytes();
-		if (optionBytes != null && optionBytes.length > 0)
+		final byte[] optionBytes = header.getOptionBytes();
+		if (optionBytes != null)
 			System.arraycopy(optionBytes, 0, buffer, 20, optionBytes.length);
 
 		return buffer;
@@ -105,30 +105,30 @@ public class IPPacketFactory {
 					+ "than 20 bytes from start position to the end of array.");
 		}
 
-		byte ipVersion = (byte) (buffer[start] >> 4);
+		final byte ipVersion = (byte) (buffer[start] >> 4);
 		if (ipVersion != 0x04) {
 			throw new PacketHeaderException("Invalid IPv4 header. IP version should be 4.");
-	    }
+		}
 
-		byte internetHeaderLength = (byte) (buffer[start] & 0x0F);
+		final byte internetHeaderLength = (byte) (buffer[start] & 0x0F);
 		if(buffer.length < (start + internetHeaderLength * 4)) {
 			throw new PacketHeaderException("Not enough space in array for IP header");
 		}
 
-		byte dscp = (byte) (buffer[start + 1] >> 2);
-		byte ecn = (byte) (buffer[start + 1] & 0x03);
-		int totalLength = PacketUtil.getNetworkInt(buffer, start + 2, 2);
-		int identification = PacketUtil.getNetworkInt(buffer, start + 4, 2);
-		byte flag = buffer[start + 6];
-		boolean mayFragment = (flag & 0x40) > 0x00;
-		boolean lastFragment = (flag & 0x20) > 0x00;
-		short fragmentOffset = (short)
+		final byte dscp = (byte) (buffer[start + 1] >> 2);
+		final byte ecn = (byte) (buffer[start + 1] & 0x03);
+		final int totalLength = PacketUtil.getNetworkInt(buffer, start + 2, 2);
+		final int identification = PacketUtil.getNetworkInt(buffer, start + 4, 2);
+		final byte flag = buffer[start + 6];
+		final boolean mayFragment = (flag & 0x40) > 0x00;
+		final boolean lastFragment = (flag & 0x20) > 0x00;
+		final short fragmentOffset = (short)
 				(PacketUtil.getNetworkInt(buffer, start + 6, 2) & 0x1FFF);
-		byte timeToLive = buffer[start + 8];
-		byte protocol = buffer[start + 9];
-		int checksum = PacketUtil.getNetworkInt(buffer, start + 10, 2);
-		int sourceIp = PacketUtil.getNetworkInt(buffer, start + 12, 4);
-		int desIp = PacketUtil.getNetworkInt(buffer, start + 16, 4);
+		final byte timeToLive = buffer[start + 8];
+		final byte protocol = buffer[start + 9];
+		final int checksum = PacketUtil.getNetworkInt(buffer, start + 10, 2);
+		final int sourceIp = PacketUtil.getNetworkInt(buffer, start + 12, 4);
+		final int desIp = PacketUtil.getNetworkInt(buffer, start + 16, 4);
 		byte[] options = null;
 		if(internetHeaderLength > 5){
 			int optionLength = (internetHeaderLength - 5) * 4;
