@@ -38,15 +38,16 @@ import android.util.Log;
  * Date: May 22, 2014
  */
 class SessionHandler {
-	public static final String TAG = "SessionHandler";
+	private static final String TAG = "SessionHandler";
+	private static final boolean enabledDebugLog = false;
 	
 	private static final Object synObject = new Object();
-	private static volatile SessionHandler handler = null;
+	private static volatile SessionHandler handler;
 	private SessionManager sessionManager;
 	private IClientPacketWriter writer;
 	private TCPPacketFactory factory;
 	private UDPPacketFactory udpFactory;
-	private SocketData packetData = null;
+	private SocketData packetData;
 
 	static SessionHandler getInstance() throws IOException{
 		if(handler == null){
@@ -93,114 +94,114 @@ class SessionHandler {
 
 	private void handleTCPPacket(byte[] clientPacketData, IPv4Header ipHeader, TCPHeader tcpheader){
 		int length = clientPacketData.length;
-        int dataLength = length - ipHeader.getIPHeaderLength() - tcpheader.getTCPHeaderLength();
-        // for debugging purpose
-        if(PacketUtil.isEnabledDebugLog()) {
-	        String str = PacketUtil.getOutput(ipHeader, tcpheader, clientPacketData);
-	        Log.d(TAG,">>>>>>>> Received from client <<<<<<<<<<");
-	        Log.d(TAG,str);
-	        Log.d(TAG,">>>>>>>>>>>>>>>>>>>end receiving from client>>>>>>>>>>>>>>>>>>>>>");
-	        Log.d(TAG,"handlePacket(length) => "+length);
-	        str = PacketUtil.bytesToStringArray(clientPacketData);
-	        Log.d(TAG,str);
-        }
+		int dataLength = length - ipHeader.getIPHeaderLength() - tcpheader.getTCPHeaderLength();
+		// for debugging purpose
+		if(enabledDebugLog) {
+			String str = PacketUtil.getOutput(ipHeader, tcpheader, clientPacketData);
+			Log.d(TAG,">>>>>>>> Received from client <<<<<<<<<<");
+			Log.d(TAG,str);
+			Log.d(TAG,">>>>>>>>>>>>>>>>>>>end receiving from client>>>>>>>>>>>>>>>>>>>>>");
+			Log.d(TAG,"handlePacket(length) => "+length);
+			str = PacketUtil.bytesToStringArray(clientPacketData);
+			Log.d(TAG,str);
+		}
 
-        if(tcpheader.isSYN()) {
-        	
-        	//3-way handshake + create new session
-        	//set windows size and scale, set reply time in options
-        	replySynAck(ipHeader,tcpheader);
-        	
-        } else if(tcpheader.isACK()) {
+		if(tcpheader.isSYN()) {
+
+			//3-way handshake + create new session
+			//set windows size and scale, set reply time in options
+			replySynAck(ipHeader,tcpheader);
+
+		} else if(tcpheader.isACK()) {
 			String key = sessionManager.createKey(ipHeader.getDestinationIP(), tcpheader.getDestinationPort(),
 					ipHeader.getSourceIP(), tcpheader.getSourcePort());
-        	Session session = sessionManager.getSessionByKey(key);
+			Session session = sessionManager.getSessionByKey(key);
 
-        	if(session == null) {
-        		Log.d(TAG,"**** ==> Session not found: " + key);
-        		if(!tcpheader.isRST() && !tcpheader.isFIN()){
-        			this.sendRstPacket(ipHeader, tcpheader, dataLength);
-        		}
-    			return;
-        		/*
-        		if(datalength > 0){
-        			//lost session? auto establish it
-        			this.recreateSession(ipheader, tcpheader);
-        			Log.d(TAG,"re-establish session");
-        	        
-        		}else{
-        			//ACK to some unknown => tell client to reset
-        			this.sendRstPacket(ipheader, tcpheader, datalength);
-        			return;
-        		}
-        		*/
-        	}
-        	//any data from client?
-        	if(dataLength > 0){
-        		//accumulate data from client
-        		int totalAdded = sessionManager.addClientData(ipHeader, tcpheader, clientPacketData);
-        		if(totalAdded > 0){
-	        		/*
-	        		byte[] clientdata = new byte[totalAdded];
-	        		int offset = ipheader.getIPHeaderLength() + tcpheader.getTCPHeaderLength();
-	        		System.arraycopy(clientpacketdata, offset, clientdata, 0, totalAdded);
-	        		Log.d(TAG,"@@@@@@ Data from Client @@@@@@@@@@@@");
-	        		String svpn = new String(clientdata);
-	        		Log.d(TAG,svpn);
-	        		Log.d(TAG,"@@@@@@ End Data from Client @@@@@@@@@@@@");
-	        		*/
-        			//send ack to client only if new data was added
-        			sendAck(ipHeader,tcpheader,totalAdded, session);
-        		}
-        	}else{
-        		//an ack from client for previously sent data
-        		acceptAck(ipHeader,tcpheader, session);
-        		
-        		if(session.isClosingConnection()){
-        			sendFinAck(ipHeader, tcpheader, session);
-        		}else if(session.isAckedToFin() && !tcpheader.isFIN()){
-        			//the last ACK from client after FIN-ACK flag was sent
-        			sessionManager.closeSession(ipHeader.getDestinationIP(), tcpheader.getDestinationPort(),
-        					ipHeader.getSourceIP(), tcpheader.getSourcePort());
-        			Log.d(TAG,"got last ACK after FIN, session is now closed.");
-        		}
-        	}
-        	//received the last segment of data from vpn client
-        	if(tcpheader.isPSH()){
-        		//push data to destination here. Background thread will receive data and fill session's buffer.
-        		//Background thread will send packet to client
-        		pushDataToDestination(session, ipHeader, tcpheader);
-        	}else if(tcpheader.isFIN()){
-        		//fin from vpn client is the last packet
-        		//ack it
-        		Log.d(TAG,"FIN from vpn client, will ack it.");
-        		ackFinAck(ipHeader, tcpheader, session);
-        	}else if(tcpheader.isRST()){
-        		resetConnection(ipHeader, tcpheader);
-        	}
-        	if(!session.isClientWindowFull() && !session.isAbortingConnection()){
-        		sessionManager.keepSessionAlive(session);
-        	}
-        }else if(tcpheader.isFIN()){
-        	//case client sent FIN without ACK
-        	Session session = sessionManager.getSession(ipHeader.getDestinationIP(), tcpheader.getDestinationPort(),
-    				ipHeader.getSourceIP(), tcpheader.getSourcePort());
-        	if(session == null)
-        		ackFinAck(ipHeader, tcpheader, null);
-        	else
-        		sessionManager.keepSessionAlive(session);
+			if(session == null) {
+				Log.d(TAG,"**** ==> Session not found: " + key);
+				if(!tcpheader.isRST() && !tcpheader.isFIN()){
+					this.sendRstPacket(ipHeader, tcpheader, dataLength);
+				}
+				return;
+				/*
+				if(datalength > 0){
+					//lost session? auto establish it
+					this.recreateSession(ipheader, tcpheader);
+					Log.d(TAG,"re-establish session");
 
-        }else if(tcpheader.isRST()){
-        	Log.d(TAG,"**** Reset client connection for dest: "+PacketUtil.intToIPAddress(ipHeader.getDestinationIP())+":"+tcpheader.getDestinationPort()
-        			+"-"+PacketUtil.intToIPAddress(ipHeader.getSourceIP())+":"+tcpheader.getSourcePort());
-        	resetConnection(ipHeader, tcpheader);
-        }else{
-        	Log.d(TAG,"unknown TCP flag");
-        	String str1 = PacketUtil.getOutput(ipHeader, tcpheader, clientPacketData);
-            Log.d(TAG,">>>>>>>> Received from client <<<<<<<<<<");
-            Log.d(TAG,str1);
-            Log.d(TAG,">>>>>>>>>>>>>>>>>>>end receiving from client>>>>>>>>>>>>>>>>>>>>>");
-        }
+				}else{
+					//ACK to some unknown => tell client to reset
+					this.sendRstPacket(ipheader, tcpheader, datalength);
+					return;
+				}
+				*/
+			}
+			//any data from client?
+			if(dataLength > 0){
+				//accumulate data from client
+				int totalAdded = sessionManager.addClientData(ipHeader, tcpheader, clientPacketData);
+				if(totalAdded > 0){
+					/*
+					byte[] clientdata = new byte[totalAdded];
+					int offset = ipheader.getIPHeaderLength() + tcpheader.getTCPHeaderLength();
+					System.arraycopy(clientpacketdata, offset, clientdata, 0, totalAdded);
+					Log.d(TAG,"@@@@@@ Data from Client @@@@@@@@@@@@");
+					String svpn = new String(clientdata);
+					Log.d(TAG,svpn);
+					Log.d(TAG,"@@@@@@ End Data from Client @@@@@@@@@@@@");
+					*/
+					//send ack to client only if new data was added
+					sendAck(ipHeader,tcpheader,totalAdded, session);
+				}
+			}else{
+				//an ack from client for previously sent data
+				acceptAck(ipHeader,tcpheader, session);
+
+				if(session.isClosingConnection()){
+					sendFinAck(ipHeader, tcpheader, session);
+				}else if(session.isAckedToFin() && !tcpheader.isFIN()){
+					//the last ACK from client after FIN-ACK flag was sent
+					sessionManager.closeSession(ipHeader.getDestinationIP(), tcpheader.getDestinationPort(),
+							ipHeader.getSourceIP(), tcpheader.getSourcePort());
+					Log.d(TAG,"got last ACK after FIN, session is now closed.");
+				}
+			}
+			//received the last segment of data from vpn client
+			if(tcpheader.isPSH()){
+				//push data to destination here. Background thread will receive data and fill session's buffer.
+				//Background thread will send packet to client
+				pushDataToDestination(session, ipHeader, tcpheader);
+			}else if(tcpheader.isFIN()){
+				//fin from vpn client is the last packet
+				//ack it
+				Log.d(TAG,"FIN from vpn client, will ack it.");
+				ackFinAck(ipHeader, tcpheader, session);
+			}else if(tcpheader.isRST()){
+				resetConnection(ipHeader, tcpheader);
+			}
+			if(!session.isClientWindowFull() && !session.isAbortingConnection()){
+				sessionManager.keepSessionAlive(session);
+			}
+		}else if(tcpheader.isFIN()){
+			//case client sent FIN without ACK
+			Session session = sessionManager.getSession(ipHeader.getDestinationIP(), tcpheader.getDestinationPort(),
+					ipHeader.getSourceIP(), tcpheader.getSourcePort());
+			if(session == null)
+				ackFinAck(ipHeader, tcpheader, null);
+			else
+				sessionManager.keepSessionAlive(session);
+
+		}else if(tcpheader.isRST()){
+			Log.d(TAG,"**** Reset client connection for dest: "+PacketUtil.intToIPAddress(ipHeader.getDestinationIP())+":"+tcpheader.getDestinationPort()
+					+"-"+PacketUtil.intToIPAddress(ipHeader.getSourceIP())+":"+tcpheader.getSourcePort());
+			resetConnection(ipHeader, tcpheader);
+		}else{
+			Log.d(TAG,"unknown TCP flag");
+			String str1 = PacketUtil.getOutput(ipHeader, tcpheader, clientPacketData);
+			Log.d(TAG,">>>>>>>> Received from client <<<<<<<<<<");
+			Log.d(TAG,str1);
+			Log.d(TAG,">>>>>>>>>>>>>>>>>>>end receiving from client>>>>>>>>>>>>>>>>>>>>>");
+		}
 	}
 	/**
 	 * handle each packet from each vpn client
@@ -237,17 +238,17 @@ class SessionHandler {
 		Message message = MainActivity.mHandler.obtainMessage(MainActivity.PACKET, packet);
 		message.sendToTarget();
 
-        if(tcpheader != null){
-        	handleTCPPacket(clientPacketData, ipHeader, tcpheader);
-        }else if(udpheader != null){
+		if(tcpheader != null){
+			handleTCPPacket(clientPacketData, ipHeader, tcpheader);
+		}else if(udpheader != null){
 //        	Log.d(TAG,"-------- UDP packet from client ---------");
 //        	String str = PacketUtil.getUDPoutput(ipheader, udpheader);
 //        	Log.d(TAG,str);
 //        	Log.d(TAG,"------ end UDP packet from client -------");
 //        	str = PacketUtil.bytesToStringArray(clientpacketdata);
 //        	Log.d(TAG,str);
-        	handleUDPPacket(clientPacketData, ipHeader, udpheader);
-        }
+			handleUDPPacket(clientPacketData, ipHeader, udpheader);
+		}
 	}
 
 	private void sendRstPacket(IPv4Header ip, TCPHeader tcp, int datalength){
@@ -430,17 +431,17 @@ class SessionHandler {
 		if(session == null)
 			return;
 		
-    	int windowScaleFactor = (int) Math.pow(2,tcpheader.getWindowScale());
-    	//Log.d(TAG,"window scale: Math.power(2,"+tcpheader.getWindowScale()+") is "+windowScaleFactor);
-    	session.setSendWindowSizeAndScale(tcpheader.getWindowSize(), windowScaleFactor);
-    	Log.d(TAG,"send-window size: " + session.getSendWindow());
-    	session.setMaxSegmentSize(tcpheader.getMaxSegmentSize());
-    	session.setSendUnack(tcpheader.getSequenceNumber());
-    	session.setSendNext(tcpheader.getSequenceNumber() + 1);
-    	//client initial sequence has been incremented by 1 and set to ack
-    	session.setRecSequence(tcpheader.getAckNumber());
-    	
-    	try {
+		int windowScaleFactor = (int) Math.pow(2,tcpheader.getWindowScale());
+		//Log.d(TAG,"window scale: Math.power(2,"+tcpheader.getWindowScale()+") is "+windowScaleFactor);
+		session.setSendWindowSizeAndScale(tcpheader.getWindowSize(), windowScaleFactor);
+		Log.d(TAG,"send-window size: " + session.getSendWindow());
+		session.setMaxSegmentSize(tcpheader.getMaxSegmentSize());
+		session.setSendUnack(tcpheader.getSequenceNumber());
+		session.setSendNext(tcpheader.getSequenceNumber() + 1);
+		//client initial sequence has been incremented by 1 and set to ack
+		session.setRecSequence(tcpheader.getAckNumber());
+
+		try {
 			writer.write(packet.getBuffer());
 			packetData.addData(packet.getBuffer());
 			Log.d(TAG,"Send SYN-ACK to client");
