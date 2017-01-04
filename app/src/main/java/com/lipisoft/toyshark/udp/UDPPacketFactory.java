@@ -6,9 +6,9 @@ import com.lipisoft.toyshark.tcp.PacketHeaderException;
 import com.lipisoft.toyshark.util.PacketUtil;
 
 public class UDPPacketFactory {
-	public UDPPacketFactory(){}
-	
-	public UDPHeader createUDPHeader(byte[] buffer, int start) throws PacketHeaderException{
+	private static final String TAG = "UDPPacketFactory";
+
+	public static UDPHeader createUDPHeader(byte[] buffer, int start) throws PacketHeaderException{
 		if((buffer.length - start) < 8){
 			throw new PacketHeaderException("Minimum UDP header is 8 bytes.");
 		}
@@ -19,7 +19,8 @@ public class UDPPacketFactory {
 
 		return new UDPHeader(srcPort, destPort, length, checksum);
 	}
-	public UDPHeader copyHeader(UDPHeader header){
+
+	public static UDPHeader copyHeader(UDPHeader header){
 		return new UDPHeader(header.getSourcePort(), header.getDestinationPort(),
 				header.getLength(), header.getChecksum());
 	}
@@ -30,7 +31,7 @@ public class UDPPacketFactory {
 	 * @param packetdata packet data to be sent to client
 	 * @return array of byte
 	 */
-	public byte[] createResponsePacket(IPv4Header ip, UDPHeader udp, byte[] packetdata){
+	public static byte[] createResponsePacket(IPv4Header ip, UDPHeader udp, byte[] packetdata){
 		byte[] buffer;
 		int udplen = 8;
 		if(packetdata != null){

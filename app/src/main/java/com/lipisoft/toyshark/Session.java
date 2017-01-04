@@ -58,14 +58,14 @@ public class Session {
 	private int sourcePort = 0;
 	
 	//sequence received from client
-	private int recSequence = 0;
+	private long recSequence = 0;
 	
 	//track ack we sent to client and waiting for ack back from client
-	private int sendUnack = 0;
+	private long sendUnack = 0;
 	private boolean isacked = false;//last packet was acked yet?
 	
 	//the next ack to send to client
-	private int sendNext = 0;
+	private long sendNext = 0;
 	private int sendWindow = 0; //window = windowsize x windowscale
 	private int sendWindowSize = 0;
 	private int sendWindowScale = 0;
@@ -126,9 +126,13 @@ public class Session {
 	
 	public long connectionStartTime = 0;
 	
-	Session(){
+	Session(int sourceIp, int sourcePort, int destinationIp, int destnationPort){
 		receivingStream = new ByteArrayOutputStream();
 		sendingStream = new ByteArrayOutputStream();
+		this.sourceIp = sourceIp;
+		this.sourcePort = sourcePort;
+		this.destAddress = destinationIp;
+		this.destPort = destnationPort;
 	}
 
 	/**
@@ -145,7 +149,7 @@ public class Session {
 	 * decrease value of sendAmountSinceLastAck so that client's window is not full
 	 * @param amount Amount
 	 */
-	synchronized void decreaseAmountSentSinceLastAck(int amount){
+	synchronized void decreaseAmountSentSinceLastAck(long amount){
 		sendAmountSinceLastAck -= amount;
 		if(sendAmountSinceLastAck < 0){
 			Log.e(TAG, "Amount data to be decreased is over than its window.");
@@ -258,31 +262,23 @@ public class Session {
 		return destAddress;
 	}
 
-	void setDestAddress(int destAddress) {
-		this.destAddress = destAddress;
-	}
-
 	public int getDestPort() {
 		return destPort;
 	}
 
-	void setDestPort(int destPort) {
-		this.destPort = destPort;
-	}
-
-	int getSendUnack() {
+	long getSendUnack() {
 		return sendUnack;
 	}
 
-	void setSendUnack(int sendUnack) {
+	void setSendUnack(long sendUnack) {
 		this.sendUnack = sendUnack;
 	}
 
-	public int getSendNext() {
+	public long getSendNext() {
 		return sendNext;
 	}
 
-	public void setSendNext(int sendNext) {
+	public void setSendNext(long sendNext) {
 		this.sendNext = sendNext;
 	}
 
@@ -318,16 +314,8 @@ public class Session {
 		return sourceIp;
 	}
 
-	void setSourceIp(int sourceIp) {
-		this.sourceIp = sourceIp;
-	}
-
 	public int getSourcePort() {
 		return sourcePort;
-	}
-
-	void setSourcePort(int sourcePort) {
-		this.sourcePort = sourcePort;
 	}
 
 //	public int getSendWindowSize() {
@@ -352,11 +340,11 @@ public class Session {
 		this.isacked = isacked;
 	}
 
-	public int getRecSequence() {
+	public long getRecSequence() {
 		return recSequence;
 	}
 
-	void setRecSequence(int recSequence) {
+	void setRecSequence(long recSequence) {
 		this.recSequence = recSequence;
 	}
 

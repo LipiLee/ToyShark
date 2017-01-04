@@ -16,8 +16,12 @@
 
 package com.lipisoft.toyshark;
 
+import android.support.annotation.Nullable;
+import android.util.Log;
+
 import com.lipisoft.toyshark.ip.IPv4Header;
 import com.lipisoft.toyshark.tcp.TCPHeader;
+import com.lipisoft.toyshark.udp.UDPHeader;
 
 /**
  * Data structure that encapsulate both IPv4Header and TCPHeader
@@ -25,10 +29,21 @@ import com.lipisoft.toyshark.tcp.TCPHeader;
  * Date: May 27, 2014
  */
 public class Packet {
+	private static final String TAG = "PACKET";
+	private static final int UDP_HEADER_LENGTH = 8;
 	private IPv4Header ipHeader;
 	private TCPHeader tcpheader;
+	private UDPHeader udpHeader;
 	private byte[] buffer;
-	
+
+	public UDPHeader getUdpHeader() {
+		return udpHeader;
+	}
+
+	public void setUdpHeader(UDPHeader udpHeader) {
+		this.udpHeader = udpHeader;
+	}
+
 	public IPv4Header getIpHeader() {
 		return ipHeader;
 	}
@@ -37,7 +52,7 @@ public class Packet {
 		this.ipHeader = ipHeader;
 	}
 
-	TCPHeader getTcpHeader() {
+	public TCPHeader getTcpHeader() {
 		return tcpheader;
 	}
 
@@ -55,28 +70,5 @@ public class Packet {
 
 	public void setBuffer(byte[] buffer) {
 		this.buffer = buffer;
-	}
-
-	public int getPacketBodyLength(){
-		if(buffer != null)
-			return buffer.length - tcpheader.getTCPHeaderLength() + ipHeader.getIPHeaderLength();
-		return 0;
-	}
-
-	/**
-	 * get data portion of the packet if available. Otherwise, return empty array of byte
-	 * @return array of byte
-	 */
-	public byte[] getPacketBody(){
-		if(buffer != null){
-			int offset = tcpheader.getTCPHeaderLength() - ipHeader.getIPHeaderLength();
-			int len = buffer.length - offset;
-			if(len > 0){
-				byte[] data = new byte[len];
-				System.arraycopy(buffer, offset, data, 0, len);
-				return data;
-			}
-		}
-		return new byte[0];
 	}
 }

@@ -1,12 +1,12 @@
 package com.lipisoft.toyshark.socket;
 
+import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.lipisoft.toyshark.IClientPacketWriter;
 import com.lipisoft.toyshark.Session;
 import com.lipisoft.toyshark.SessionManager;
 import com.lipisoft.toyshark.tcp.TCPPacketFactory;
-import com.lipisoft.toyshark.udp.UDPPacketFactory;
 import com.lipisoft.toyshark.util.PacketUtil;
 
 import java.io.IOException;
@@ -16,74 +16,63 @@ import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.SocketChannel;
 import java.util.Date;
 
-class SocketDataWriterWorker implements Runnable{
-	public static final String TAG = "SocketDataWriterWorker";
-	private IClientPacketWriter writer;
-	private TCPPacketFactory tcpPacketFactory;
-	private UDPPacketFactory udpPacketFactory;
-	private SessionManager sessionManager;
-	private String sessionKey = "";
-	private SocketData pdata;
+public class SocketDataWriterWorker implements Runnable {
+	private static final String TAG = "SocketDataWriterWorker";
 
-	SocketDataWriterWorker(TCPPacketFactory tcpPacketFactory, UDPPacketFactory udpPacketFactory, IClientPacketWriter writer){
-		sessionManager = SessionManager.getInstance();
-		pdata = SocketData.getInstance();
-		this.tcpPacketFactory = tcpPacketFactory;
-		this.udpPacketFactory = udpPacketFactory;
+	private static IClientPacketWriter writer;
+	@NonNull private String sessionKey;
+
+	SocketDataWriterWorker(IClientPacketWriter writer, @NonNull String sessionKey) {
 		this.writer = writer;
-	}
-
-	public String getSessionKey() {
-		return sessionKey;
-	}
-
-	void setSessionKey(String sessionKey) {
 		this.sessionKey = sessionKey;
 	}
 
 	@Override
 	public void run() {
-		Session sess = sessionManager.getSessionByKey(sessionKey);
-		if(sess == null){
+		final SessionManager sessionManager = SessionManager.getInstance();
+		final Session session = sessionManager.getSessionByKey(sessionKey);
+		if(session == null) {
+			Log.d(TAG, "No session related to " + sessionKey + "for write");
 			return;
 		}
-		sess.setBusywrite(true);
-		if(sess.getSocketChannel() != null){
-			writeTCP(sess);
-		}else if(sess.getUdpChannel() != null){
-			writeUDP(sess);
+
+		session.setBusywrite(true);
+		if(session.getSocketChannel() != null){
+			writeTCP(session);
+		}else if(session.getUdpChannel() != null){
+			writeUDP(session);
 		}
-		sess.setBusywrite(false);
-		if(sess.isAbortingConnection()){
-			Log.d(TAG,"removing aborted connection -> "+
-					PacketUtil.intToIPAddress(sess.getDestAddress())+":"+sess.getDestPort()
-					+"-"+PacketUtil.intToIPAddress(sess.getSourceIp())+":"+sess.getSourcePort());
-			sess.getSelectionkey().cancel();
-			if(sess.getSocketChannel() != null && sess.getSocketChannel().isConnected()){
+		session.setBusywrite(false);
+
+		if(session.isAbortingConnection()){
+			Log.d(TAG,"removing aborted connection -> " + sessionKey);
+			session.getSelectionkey().cancel();
+			if(session.getSocketChannel() != null &&
+					session.getSocketChannel().isConnected()){
 				try {
-					sess.getSocketChannel().close();
+					session.getSocketChannel().close();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-			}else if(sess.getUdpChannel() != null && sess.getUdpChannel().isConnected()){
+			}else if(session.getUdpChannel() != null &&
+					session.getUdpChannel().isConnected()){
 				try {
-					sess.getUdpChannel().close();
+					session.getUdpChannel().close();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
 			}
-			sessionManager.closeSession(sess);
+			sessionManager.closeSession(session);
 		}
-
 	}
-	private void writeUDP(Session sess){
-		if(!sess.hasDataToSend()){
+	private void writeUDP(Session session){
+		if(!session.hasDataToSend()){
 			return;
 		}
-		DatagramChannel channel = sess.getUdpChannel();
-		String name = PacketUtil.intToIPAddress(sess.getDestAddress())+":"+sess.getDestPort()+
-				"-"+PacketUtil.intToIPAddress(sess.getSourceIp())+":"+sess.getSourcePort();
-		byte[] data = sess.getSendingData();
+		DatagramChannel channel = session.getUdpChannel();
+		String name = PacketUtil.intToIPAddress(session.getDestAddress())+":"+session.getDestPort()+
+				"-"+PacketUtil.intToIPAddress(session.getSourceIp())+":"+session.getSourcePort();
+		byte[] data = session.getSendingData();
 		ByteBuffer buffer = ByteBuffer.allocate(data.length);
 		buffer.put(data);
 		buffer.flip();
@@ -95,12 +84,12 @@ class SocketDataWriterWorker implements Runnable{
 			Log.d(TAG,"writing data to remote UDP: "+name);
 			channel.write(buffer);
 			Date dt = new Date();
-			sess.connectionStartTime = dt.getTime();
+			session.connectionStartTime = dt.getTime();
 		}catch(NotYetConnectedException ex2){
-			sess.setAbortingConnection(true);
+			session.setAbortingConnection(true);
 			Log.e(TAG,"Error writing to unconnected-UDP server, will abort current connection: "+ex2.getMessage());
 		} catch (IOException e) {
-			sess.setAbortingConnection(true);
+			session.setAbortingConnection(true);
 			e.printStackTrace();
 			Log.e(TAG,"Error writing to UDP server, will abort connection: "+e.getMessage());
 		}
@@ -127,10 +116,12 @@ class SocketDataWriterWorker implements Runnable{
 			Log.e(TAG,"Error writing to server: "+e.getMessage());
 			
 			//close connection with vpn client
-			byte[] rstdata = tcpPacketFactory.createRstData(session.getLastIpHeader(), session.getLastTcpHeader(), 0);
+			byte[] rstData = TCPPacketFactory.createRstData(
+					session.getLastIpHeader(), session.getLastTcpHeader(), 0);
 			try {
-				writer.write(rstdata);
-				pdata.addData(rstdata);
+				writer.write(rstData);
+				SocketData socketData = SocketData.getInstance();
+				socketData.addData(rstData);
 			} catch (IOException ex) {
 				ex.printStackTrace();
 			}
@@ -138,7 +129,5 @@ class SocketDataWriterWorker implements Runnable{
 			Log.e(TAG,"failed to write to remote socket, aborting connection");
 			session.setAbortingConnection(true);
 		}
-		
 	}
-
 }

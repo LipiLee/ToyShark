@@ -40,7 +40,7 @@ public class SocketData {
 		return instance;
 	}
 
-	private SocketData(){
+	private SocketData() {
 		data = new LinkedList<>();
 	}
 

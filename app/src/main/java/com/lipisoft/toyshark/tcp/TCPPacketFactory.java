@@ -38,7 +38,7 @@ import android.util.Log;
 public class TCPPacketFactory {
 	public static final String TAG = "TCPPacketFactory";
 	
-	private TCPHeader copyTCPHeader(TCPHeader tcpheader){
+	private static TCPHeader copyTCPHeader(TCPHeader tcpheader){
 		TCPHeader tcp = new TCPHeader(tcpheader.getSourcePort(),
 				tcpheader.getDestinationPort(), tcpheader.getSequenceNumber(),
 				tcpheader.getDataOffset(), tcpheader.isNS(),
@@ -62,8 +62,8 @@ public class TCPPacketFactory {
 	 * @param seqToClient sequence
 	 * @return byte[]
 	 */
-	public byte[] createFinAckData(IPv4Header iPv4Header, TCPHeader tcpHeader,
-								   int ackToClient, int seqToClient,
+	public static byte[] createFinAckData(IPv4Header iPv4Header, TCPHeader tcpHeader,
+								   long ackToClient, long seqToClient,
 								   boolean isFin, boolean isAck){
 		IPv4Header ip = IPPacketFactory.copyIPv4Header(iPv4Header);
 		TCPHeader tcp = copyTCPHeader(tcpHeader);
@@ -103,7 +103,8 @@ public class TCPPacketFactory {
 		
 		return createPacketData(ip, tcp, null);
 	}
-	public byte[] createFinData(IPv4Header ip, TCPHeader tcp, int ackNumber, int seqNumber, int timeSender, int timeReplyto){
+
+	public static byte[] createFinData(IPv4Header ip, TCPHeader tcp, long ackNumber, long seqNumber, int timeSender, int timeReplyto){
 		//flip IP from source to dest and vice-versa
 		int sourceIp = ip.getDestinationIP();
 		int destIp = ip.getSourceIP();
@@ -148,6 +149,7 @@ public class TCPPacketFactory {
 		
 		return createPacketData(ip, tcp, null);
 	}
+
 	/**
 	 * create packet with RST flag for sending to client when reset is required.
 	 * @param ipheader IP Header
@@ -155,7 +157,7 @@ public class TCPPacketFactory {
 	 * @param datalength Data Length
 	 * @return byte[]
 	 */
-	public byte[] createRstData(IPv4Header ipheader, TCPHeader tcpheader, int datalength){
+	public static byte[] createRstData(IPv4Header ipheader, TCPHeader tcpheader, int datalength){
 		IPv4Header ip = IPPacketFactory.copyIPv4Header(ipheader);
 		TCPHeader tcp = copyTCPHeader(tcpheader);
 		
@@ -165,8 +167,8 @@ public class TCPPacketFactory {
 		int sourcePort = tcp.getDestinationPort();
 		int destPort = tcp.getSourcePort();
 		
-		int ackNumber = 0;
-		int seqNumber = 0;
+		long ackNumber = 0;
+		long seqNumber = 0;
 		
 		if(tcp.getAckNumber() > 0){
 			seqNumber = tcp.getAckNumber();
@@ -208,6 +210,7 @@ public class TCPPacketFactory {
 		
 		return createPacketData(ip, tcp, null);
 	}
+
 	/**
 	 * Acknowledgment to client that server has received request.
 	 * @param ipheader IP Header
@@ -215,7 +218,7 @@ public class TCPPacketFactory {
 	 * @param ackToClient Acknowledge
 	 * @return byte[]
 	 */
-	public byte[] createResponseAckData(IPv4Header ipheader, TCPHeader tcpheader, int ackToClient){
+	public static byte[] createResponseAckData(IPv4Header ipheader, TCPHeader tcpheader, long ackToClient){
 		IPv4Header ip = IPPacketFactory.copyIPv4Header(ipheader);
 		TCPHeader tcp = copyTCPHeader(tcpheader);
 		
@@ -225,7 +228,7 @@ public class TCPPacketFactory {
 		int sourcePort = tcp.getDestinationPort();
 		int destPort = tcp.getSourcePort();
 		
-		int seqNumber = tcp.getAckNumber();
+		long seqNumber = tcp.getAckNumber();
 		
 		ip.setDestinationIP(destIp);
 		ip.setSourceIP(sourceIp);
@@ -255,6 +258,7 @@ public class TCPPacketFactory {
 		
 		return createPacketData(ip, tcp, null);
 	}
+
 	/**
 	 * create packet data for sending back to client
 	 * @param ip IP Header
@@ -262,8 +266,8 @@ public class TCPPacketFactory {
 	 * @param packetdata Packet Data
 	 * @return byte[]
 	 */
-	public byte[] createResponsePacketData(IPv4Header ip, TCPHeader tcp, byte[] packetdata, boolean ispsh, 
-			int ackNumber, int seqNumber, int timeSender, int timeReplyto){
+	public static byte[] createResponsePacketData(IPv4Header ip, TCPHeader tcp, byte[] packetdata, boolean ispsh,
+			long ackNumber, long seqNumber, int timeSender, int timeReplyto){
 		IPv4Header ipheader = IPPacketFactory.copyIPv4Header(ip);
 		TCPHeader tcpheader = copyTCPHeader(tcp);
 		
@@ -301,13 +305,14 @@ public class TCPPacketFactory {
 		
 		return createPacketData(ipheader, tcpheader, packetdata);
 	}
+
 	/**
 	 * create SYN-ACK packet data from writing back to client stream
 	 * @param ip IP Header
 	 * @param tcp TCP Header
 	 * @return class Packet
 	 */
-	public Packet createSynAckPacketData(IPv4Header ip, TCPHeader tcp){
+	public static Packet createSynAckPacketData(IPv4Header ip, TCPHeader tcp){
 		Packet packet = new Packet();
 		
 		IPv4Header ipheader = IPPacketFactory.copyIPv4Header(ip);
@@ -318,8 +323,8 @@ public class TCPPacketFactory {
 		int destIp = ipheader.getSourceIP();
 		int sourcePort = tcpheader.getDestinationPort();
 		int destPort = tcpheader.getSourcePort();
-		int ackNumber = tcpheader.getSequenceNumber() + 1;
-		int seqNumber;
+		long ackNumber = tcpheader.getSequenceNumber() + 1;
+		long seqNumber;
 		Random random = new Random();
 		seqNumber = random.nextInt();
 		if(seqNumber < 0){
@@ -353,6 +358,7 @@ public class TCPPacketFactory {
 		packet.setBuffer(createPacketData(ipheader, tcpheader, null));
 		return packet;
 	}
+
 	/**
 	 * create packet data from IP Header, TCP header and data
 	 * @param ipheader IPv4Header object
@@ -360,7 +366,7 @@ public class TCPPacketFactory {
 	 * @param data array of byte (packet body)
 	 * @return array of byte
 	 */
-    private byte[] createPacketData(IPv4Header ipheader, TCPHeader tcpheader, byte[] data){
+    private static byte[] createPacketData(IPv4Header ipheader, TCPHeader tcpheader, byte[] data){
 		int datalength = 0;
 		if(data != null){
 			datalength = data.length;
@@ -407,7 +413,7 @@ public class TCPPacketFactory {
 	 * @param header instance of TCPHeader
 	 * @return array of byte
 	 */
-	private byte[] createTCPHeaderData(TCPHeader header){
+	private static byte[] createTCPHeaderData(TCPHeader header){
 		final byte[] buffer = new byte[header.getTCPHeaderLength()];
 		buffer[0] = (byte)(header.getSourcePort() >> 8);
 		buffer[1] = (byte)(header.getSourcePort());
@@ -416,14 +422,14 @@ public class TCPPacketFactory {
 
 		final ByteBuffer sequenceNumber = ByteBuffer.allocate(4);
 		sequenceNumber.order(ByteOrder.BIG_ENDIAN);
-		sequenceNumber.putInt(header.getSequenceNumber());
+		sequenceNumber.putInt((int)header.getSequenceNumber());
 		
 		//sequence number
 		System.arraycopy(sequenceNumber.array(), 0, buffer, 4, 4);
 
 		final ByteBuffer ackNumber = ByteBuffer.allocate(4);
 		ackNumber.order(ByteOrder.BIG_ENDIAN);
-		ackNumber.putInt(header.getAckNumber());
+		ackNumber.putInt((int)header.getAckNumber());
 		System.arraycopy(ackNumber.array(), 0, buffer, 8, 4);
 		
 		buffer[12] = (byte) (header.isNS() ? (header.getDataOffset() << 4) | 0x1
@@ -473,14 +479,14 @@ public class TCPPacketFactory {
 	 * @return a new instance of TCPHeader
 	 * @throws PacketHeaderException
 	 */
-	public TCPHeader createTCPHeader(byte[] buffer, int start) throws PacketHeaderException{
+	public static TCPHeader createTCPHeader(byte[] buffer, int start) throws PacketHeaderException{
 		if(buffer.length < start + 20){
 			throw new PacketHeaderException("There is not enough space for TCP header from provided starting position");
 		}
 		int sourcePort = PacketUtil.getNetworkInt(buffer, start, 2);
 		int destPort = PacketUtil.getNetworkInt(buffer, start + 2, 2);
-		int sequenceNumber = PacketUtil.getNetworkInt(buffer, start + 4, 4);
-		int ackNumber = PacketUtil.getNetworkInt(buffer, start + 8, 4);
+		long sequenceNumber = PacketUtil.getNetworkLong(buffer, start + 4, 4);
+		long ackNumber = PacketUtil.getNetworkLong(buffer, start + 8, 4);
 		int dataOffset = (buffer[start + 12] >> 4) & 0x0F;
 		if(dataOffset < 5 && buffer.length == 60){
 			dataOffset = 10;
@@ -511,7 +517,7 @@ public class TCPPacketFactory {
 		extractOptionData(head);
 		return head;
 	}
-	private void extractOptionData(TCPHeader head){
+	private static void extractOptionData(TCPHeader head){
 		final byte[] options = head.getOptions();
 		if (options != null) {
 			for (int i = 0; i < options.length; i++) {

@@ -26,23 +26,23 @@ import android.support.annotation.Nullable;
 public class TCPHeader {
 	private int sourcePort;
 	private int destinationPort;
-	private int sequenceNumber;
+	private long sequenceNumber; // 32 bits
 	private int dataOffset;
 	private int tcpFlags;
-	private boolean isns = false;
-	private boolean iscwr = false;
+	private boolean isNs = false;
+	private boolean isCwr = false;
 	private boolean isece = false;
 	private boolean issyn = false;
 	private boolean isack = false;
 	private boolean isfin = false;
 	private boolean isrst = false;
-	private boolean ispsh = false;//end of letter
+	private boolean ispsh = false;
 	private boolean isurg = false;
 	private int windowSize;
 	private int checksum;
 	private int urgentPointer;
 	@Nullable private byte[] options;
-	private int ackNumber;
+	private long ackNumber; // 32 bits
 	//vars below need to be set via setters when copy
 	private int maxSegmentSize = 0;
 	private int windowScale = 0;
@@ -50,15 +50,15 @@ public class TCPHeader {
 	private int timeStampSender = 0;
 	private int timeStampReplyTo = 0;
 
-	TCPHeader(int sourcePort,int destinationPort,int sequenceNumber,
-			  int dataOffset, boolean isns,int tcpFlags,
-			  int windowSize,int checksum, int urgentPointer,
-			  @Nullable byte[] options,int ackNumber){
+	TCPHeader(int sourcePort, int destinationPort, long sequenceNumber,
+			  int dataOffset, boolean isns, int tcpFlags,
+			  int windowSize, int checksum, int urgentPointer,
+			  @Nullable byte[] options, long ackNumber){
 		this.sourcePort = sourcePort;
 		this.destinationPort = destinationPort;
 		this.sequenceNumber = sequenceNumber;
 		this.dataOffset = dataOffset;
-		this.isns = isns;
+		this.isNs = isns;
 		this.tcpFlags = tcpFlags;
 		this.windowSize = windowSize;
 		this.checksum = checksum;
@@ -67,34 +67,28 @@ public class TCPHeader {
 		this.ackNumber = ackNumber;
 		setFlagBits();
 	}
-	private void setFlagBits(){
-		isack = (this.tcpFlags & 0x10) > 0;
-
-		isfin = (this.tcpFlags & 0x01) > 0;
-		//End Of Letter
-		ispsh = (this.tcpFlags & 0x08) > 0;
-
-		isrst = (this.tcpFlags & 0x04) > 0;
-
-		issyn = (this.tcpFlags & 0x02) > 0;
-
-		isurg = (this.tcpFlags & 0x20) > 0;
-
-		iscwr = (this.tcpFlags & 0x80) > 0;
-
-		isece = (this.tcpFlags & 0x40) > 0;
+	private void setFlagBits() {
+		isfin = (tcpFlags & 0x01) > 0;
+		issyn = (tcpFlags & 0x02) > 0;
+		isrst = (tcpFlags & 0x04) > 0;
+		ispsh = (tcpFlags & 0x08) > 0;
+		isack = (tcpFlags & 0x10) > 0;
+		isurg = (tcpFlags & 0x20) > 0;
+		isece = (tcpFlags & 0x40) > 0;
+		isCwr = (tcpFlags & 0x80) > 0;
 	}
+
 	public boolean isNS(){
-		return isns;
+		return isNs;
 	}
 	void setIsNS(boolean isns){
-		this.isns = isns;
+		this.isNs = isns;
 	}
 	public boolean isCWR(){
-		return iscwr;
+		return isCwr;
 	}
 	void setIsCWR(boolean iscwr){
-		this.iscwr = iscwr;
+		this.isCwr = iscwr;
 		if(iscwr){
 			this.tcpFlags |= 0x80;
 		}else{
@@ -190,10 +184,10 @@ public class TCPHeader {
 	void setDestinationPort(int destinationPort) {
 		this.destinationPort = destinationPort;
 	}
-	public int getSequenceNumber() {
+	public long getSequenceNumber() {
 		return sequenceNumber;
 	}
-	void setSequenceNumber(int sequenceNumber) {
+	void setSequenceNumber(long sequenceNumber) {
 		this.sequenceNumber = sequenceNumber;
 	}
 	public int getDataOffset() {
@@ -220,7 +214,7 @@ public class TCPHeader {
 	public void setChecksum(int checksum) {
 		this.checksum = checksum;
 	}
-	int getUrgentPointer() {
+	public int getUrgentPointer() {
 		return urgentPointer;
 	}
 	public void setUrgentPointer(int urgentPointer) {
@@ -232,10 +226,10 @@ public class TCPHeader {
 	void setOptions(@Nullable byte[] options) {
 		this.options = options;
 	}
-	public int getAckNumber() {
+	public long getAckNumber() {
 		return ackNumber;
 	}
-	void setAckNumber(int ackNumber) {
+	void setAckNumber(long ackNumber) {
 		this.ackNumber = ackNumber;
 	}
 	/**

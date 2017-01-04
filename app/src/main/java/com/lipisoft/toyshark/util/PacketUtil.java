@@ -90,7 +90,7 @@ public class PacketUtil {
 	}
 
 	/**
-	 * convert array of byte to int
+	 * convert array of max 4 bytes to int
 	 * @param buffer byte array
 	 * @param start Starting point to be read in byte array
 	 * @param length Length to be read
@@ -98,6 +98,29 @@ public class PacketUtil {
 	 */
 	public static int getNetworkInt(@NonNull byte[] buffer, int start, int length){
 		int value = 0;
+		int end = start + (length > 4 ? 4 : length);
+
+		if(end > buffer.length)
+			end = buffer.length;
+
+		for(int i = start; i < end; i++) {
+			value |= buffer[i] & 0xFF;
+			if(i < (end - 1))
+				value <<= 8;
+		}
+
+		return value;
+	}
+
+	/**
+	 * convert array of max 4 bytes to long
+	 * @param buffer byte array
+	 * @param start Starting point to be read in byte array
+	 * @param length Length to be read
+	 * @return value of long
+	 */
+	public static long getNetworkLong(@NonNull byte[] buffer, int start, int length){
+		long value = 0;
 		int end = start + (length > 4 ? 4 : length);
 
 		if(end > buffer.length)

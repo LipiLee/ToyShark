@@ -5,8 +5,6 @@ import android.util.Log;
 import com.lipisoft.toyshark.IClientPacketWriter;
 import com.lipisoft.toyshark.Session;
 import com.lipisoft.toyshark.SessionManager;
-import com.lipisoft.toyshark.tcp.TCPPacketFactory;
-import com.lipisoft.toyshark.udp.UDPPacketFactory;
 import com.lipisoft.toyshark.util.PacketUtil;
 
 import java.io.IOException;
@@ -14,6 +12,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
+import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
@@ -27,35 +26,28 @@ import java.util.concurrent.TimeUnit;
 
 
 public class SocketNIODataService implements Runnable {
-	public static final String TAG = "SocketNIODataService";
+	private static final String TAG = "SocketNIODataService";
 	public static final Object syncSelector = new Object();
 	public static final Object syncSelector2 = new Object();
 
-	SessionManager sessionmg;
-//	int printcount = 0;
-	private IClientPacketWriter writer;
-	private TCPPacketFactory factory;
-	private UDPPacketFactory udpfactory;
+	private SessionManager sessionManager;
+	private static IClientPacketWriter writer;
 	private volatile boolean shutdown = false;
-	private Selector selector = null;
+	private Selector selector;
 	//create thread pool for reading/writing data to socket
-	private BlockingQueue<Runnable> taskqueue;
-	private ThreadPoolExecutor workerpool;
+	private ThreadPoolExecutor workerPool;
 	
-	public SocketNIODataService(){
-		factory = new TCPPacketFactory();
-		udpfactory = new UDPPacketFactory();
-		taskqueue = new LinkedBlockingQueue<Runnable>();
-		workerpool = new ThreadPoolExecutor(8, 100, 10, TimeUnit.SECONDS, taskqueue);
+	public SocketNIODataService(IClientPacketWriter iClientPacketWriter) {
+		final BlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<Runnable>();
+		workerPool = new ThreadPoolExecutor(8, 100, 10, TimeUnit.SECONDS, taskQueue);
+		writer = iClientPacketWriter;
 	}
-	public void setWriter(IClientPacketWriter writer){
-		this.writer = writer;
-	}
+
 	@Override
 	public void run() {
 		Log.d(TAG,"SocketDataService starting in background...");
-		sessionmg = SessionManager.getInstance();
-		selector = sessionmg.getSelector();
+		sessionManager = SessionManager.getInstance();
+		selector = sessionManager.getSelector();
 		runTask();
 	}
 	/**
@@ -64,8 +56,9 @@ public class SocketNIODataService implements Runnable {
 	 */
 	public void setShutdown(boolean isshutdown){
 		this.shutdown = isshutdown;
-		this.sessionmg.getSelector().wakeup();
+		this.sessionManager.getSelector().wakeup();
 	}
+
 	void runTask(){
 		Log.d(TAG, "Selector is running...");
 		
@@ -75,10 +68,11 @@ public class SocketNIODataService implements Runnable {
 					selector.select();
 				}
 			} catch (IOException e) {
-				Log.e(TAG,"Error in Selector.select(): "+e.getMessage());
+				Log.e(TAG,"Error in Selector.select(): " + e.getMessage());
 				try {
 					Thread.sleep(100);
-				} catch (InterruptedException e1) {
+				} catch (InterruptedException ex) {
+					Log.e(TAG, e.toString());
 				}
 				continue;
 			}
@@ -88,14 +82,15 @@ public class SocketNIODataService implements Runnable {
 			synchronized(syncSelector2){
 				Iterator<SelectionKey> iter = selector.selectedKeys().iterator();
 				while(iter.hasNext()){
-					SelectionKey key = (SelectionKey)iter.next();
-					if(key.attachment() == null){
+					SelectionKey key = iter.next();
+					SelectableChannel selectableChannel = key.channel();
+					if(selectableChannel instanceof SocketChannel) {
 						try {
 							processTCPSelectionKey(key);
 						} catch (IOException e) {
 							key.cancel();
 						}
-					}else{
+					} else if (selectableChannel instanceof DatagramChannel) {
 						processUDPSelectionKey(key);
 					}
 					iter.remove();
@@ -106,13 +101,14 @@ public class SocketNIODataService implements Runnable {
 			}
 		}
 	}
+
 	void processUDPSelectionKey(SelectionKey key){
 		if(!key.isValid()){
 			Log.d(TAG,"Invalid SelectionKey for UDP");
 			return;
 		}
 		DatagramChannel channel = (DatagramChannel)key.channel();
-		Session sess = sessionmg.getSessionByDatagramChannel(channel);
+		Session sess = sessionManager.getSessionByDatagramChannel(channel);
 		if(sess == null){
 			return;
 		}
@@ -157,7 +153,7 @@ public class SocketNIODataService implements Runnable {
 			return;
 		}
 		SocketChannel channel = (SocketChannel)key.channel();
-		Session sess = sessionmg.getSessionByChannel(channel);
+		Session sess = sessionManager.getSessionByChannel(channel);
 		if(sess == null){
 			return;
 		}
@@ -194,32 +190,33 @@ public class SocketNIODataService implements Runnable {
 					Log.d(TAG,"connected to remote tcp server: "+ips+":"+port);
 				}
 			}
-			
-			
 		}
 		if(channel.isConnected()){
 			processSelector(key, sess);
 		}
 	}
-	private void processSelector(SelectionKey key, Session sess){
-		String sessionkey = sessionmg.createKey(sess.getDestAddress(), sess.getDestPort(), sess.getSourceIp(), sess.getSourcePort());
+
+	private void processSelector(SelectionKey selectionKey, Session session){
+		String sessionKey = sessionManager.createKey(session.getDestAddress(),
+				session.getDestPort(), session.getSourceIp(),
+				session.getSourcePort());
 		//tcp has PSH flag when data is ready for sending, UDP does not have this
-		if(key.isValid() && key.isWritable() && !sess.isBusywrite()){
-			if(sess.hasDataToSend() && sess.isDataForSendingReady()){
-				sess.setBusywrite(true);
-				SocketDataWriterWorker worker = new SocketDataWriterWorker(factory, udpfactory, writer);
-				worker.setSessionKey(sessionkey);
-				workerpool.execute(worker);
-			}
+		if(selectionKey.isValid() && selectionKey.isWritable()
+				&& !session.isBusywrite() && session.hasDataToSend()
+				&& session.isDataForSendingReady())
+		{
+			session.setBusywrite(true);
+			final SocketDataWriterWorker worker =
+					new SocketDataWriterWorker(writer, sessionKey);
+			workerPool.execute(worker);
 		}
-		if(key.isValid() && key.isReadable() && !sess.isBusyread()){
-			sess.setBusyread(true);
-			SocketDataReaderWorker worker = new SocketDataReaderWorker(factory, udpfactory, writer);
-			worker.setSessionKey(sessionkey);
-			workerpool.execute(worker);
+		if(selectionKey.isValid() && selectionKey.isReadable()
+				&& !session.isBusyread())
+		{
+			session.setBusyread(true);
+			final SocketDataReaderWorker worker =
+					new SocketDataReaderWorker(writer, sessionKey);
+			workerPool.execute(worker);
 		}
 	}
-	
-
-}//end
-
+}

@@ -1,5 +1,6 @@
 package com.lipisoft.toyshark.socket;
 
+import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.lipisoft.toyshark.IClientPacketWriter;
@@ -31,18 +32,15 @@ import java.util.Date;
 class SocketDataReaderWorker implements Runnable {
 	private static final String TAG = "SocketDataReaderWorker";
 	private IClientPacketWriter writer;
-	private TCPPacketFactory factory;
-	private UDPPacketFactory udpFactory;
 	private SessionManager sessionManager;
 	private String sessionKey;
 	private SocketData pData;
 
-	SocketDataReaderWorker(TCPPacketFactory tcpFactory, UDPPacketFactory udpFactory, IClientPacketWriter writer) {
+	SocketDataReaderWorker(IClientPacketWriter writer, String sessionKey) {
 		sessionManager = SessionManager.getInstance();
 		pData = SocketData.getInstance();
-		this.factory = tcpFactory;
-		this.udpFactory = udpFactory;
 		this.writer = writer;
+		this.sessionKey = sessionKey;
 	}
 
 	@Override
@@ -85,31 +83,31 @@ class SocketDataReaderWorker implements Runnable {
 
 	}
 	
-	private void readTCP(Session session){
+	private void readTCP(@NonNull Session session) {
+		if(session.isAbortingConnection()){
+			return;
+		}
+
 		SocketChannel channel = session.getSocketChannel();
 		ByteBuffer buffer = ByteBuffer.allocate(DataConst.MAX_RECEIVE_BUFFER_SIZE);
 		int len;
-		String name = PacketUtil.intToIPAddress(session.getDestAddress())+":"+session.getDestPort()+"-"+
-				PacketUtil.intToIPAddress(session.getSourceIp())+":"+session.getSourcePort();
+
 		try {
-			do{
-				if(session.isAbortingConnection()){
-					return;//break;
-				}
-				if(!session.isClientWindowFull()){
+			do {
+				if(!session.isClientWindowFull()) {
 					len = channel.read(buffer);
 					if(len > 0) { //-1 mean it reach the end of stream
 						//Log.d(TAG,"SocketDataService received "+len+" from remote server: "+name);
 						sendToRequester(buffer, channel, len, session);
 						buffer.clear();
-					}else if(len == -1){
+					} else if(len == -1) {
 						Log.d(TAG,"End of data from remote server, will send FIN to client");
-						Log.d(TAG,"send FIN to: " + name);
+						Log.d(TAG,"send FIN to: " + sessionKey);
 						sendFin(session);
 						session.setAbortingConnection(true);
 					}
 				} else {
-					Log.e(TAG,"*** client window is full, now pause for " + name);
+					Log.e(TAG,"*** client window is full, now pause for " + sessionKey);
 					break;
 				}
 			} while(len > 0);
@@ -172,16 +170,18 @@ class SocketDataReaderWorker implements Runnable {
 		}
 		byte[] packetBody = session.getReceivedData(max);
 		if(packetBody != null && packetBody.length > 0) {
-			int unAck = session.getSendNext();
-			int nextUnAck = session.getSendNext() + packetBody.length;
+			long unAck = session.getSendNext();
+			long nextUnAck = session.getSendNext() + packetBody.length;
 			//Log.d(TAG,"sending vpn client body len: "+packetBody.length+", current seq: "+unAck+", next seq: "+nextUnAck);
 			session.setSendNext(nextUnAck);
 			//we need this data later on for retransmission
 			session.setUnackData(packetBody);
 			session.setResendPacketCounter(0);
 			
-			byte[] data = factory.createResponsePacketData(ipHeader, tcpheader, packetBody, session.hasReceivedLastSegment(),
-					session.getRecSequence(), unAck, session.getTimestampSender(), session.getTimestampReplyto());
+			byte[] data = TCPPacketFactory.createResponsePacketData(ipHeader,
+					tcpheader, packetBody, session.hasReceivedLastSegment(),
+					session.getRecSequence(), unAck,
+					session.getTimestampSender(), session.getTimestampReplyto());
 			try {
 				writer.write(data);
 				pData.addData(data);
@@ -229,10 +229,11 @@ class SocketDataReaderWorker implements Runnable {
 		return false;
 	}
 	private void sendFin(Session session){
-		IPv4Header ipHeader = session.getLastIpHeader();
-		TCPHeader tcpheader = session.getLastTcpHeader();
-		byte[] data = factory.createFinData(ipHeader, tcpheader, session.getSendNext(),
-				session.getRecSequence(), session.getTimestampSender(), session.getTimestampReplyto());
+		final IPv4Header ipHeader = session.getLastIpHeader();
+		final TCPHeader tcpheader = session.getLastTcpHeader();
+		final byte[] data = TCPPacketFactory.createFinData(ipHeader, tcpheader,
+				session.getSendNext(), session.getRecSequence(),
+				session.getTimestampSender(), session.getTimestampReplyto());
 		try {
 			writer.write(data);
 			pData.addData(data);
@@ -282,8 +283,8 @@ class SocketDataReaderWorker implements Runnable {
 					//create UDP packet
 					byte[] data = new byte[len];
 					System.arraycopy(buffer.array(),0, data, 0, len);
-					byte[] packetData = udpFactory.createResponsePacket(session.getLastIpHeader(),
-							session.getLastUdpHeader(), data);
+					byte[] packetData = UDPPacketFactory.createResponsePacket(
+							session.getLastIpHeader(), session.getLastUdpHeader(), data);
 					//write to client
 					writer.write(packetData);
 					//publish to packet subscriber
@@ -294,7 +295,8 @@ class SocketDataReaderWorker implements Runnable {
 					
 					try {
 						IPv4Header ip = IPPacketFactory.createIPv4Header(packetData, 0);
-						UDPHeader udp = udpFactory.createUDPHeader(packetData, ip.getIPHeaderLength());
+						UDPHeader udp = UDPPacketFactory.createUDPHeader(
+								packetData, ip.getIPHeaderLength());
 						String str = PacketUtil.getUDPoutput(ip, udp);
 						Log.d(TAG,"++++++ SD: packet sending to client ++++++++");
 						Log.i(TAG,"got response time: " + responseTime);
@@ -312,13 +314,5 @@ class SocketDataReaderWorker implements Runnable {
 			Log.e(TAG,"Failed to read from UDP socket, aborting connection");
 			session.setAbortingConnection(true);
 		}
-	}
-
-//	public String getSessionKey() {
-//		return sessionKey;
-//	}
-
-	void setSessionKey(String sessionKey) {
-		this.sessionKey = sessionKey;
 	}
 }

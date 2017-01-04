@@ -16,6 +16,8 @@
 
 package com.lipisoft.toyshark;
 
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.lipisoft.toyshark.ip.IPv4Header;
@@ -36,8 +38,8 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.Collection;
-import java.util.Hashtable;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Manage in-memory storage for VPN client session.
@@ -45,16 +47,15 @@ import java.util.Map;
  * Date: May 20, 2014
  */
 public class SessionManager {
-	public static final String TAG = "SessionManager";
+	private static final String TAG = "SessionManager";
 	private static final Object syncObj = new Object();
 	private static volatile SessionManager instance;
 	private Map<String, Session> table;
-	private static final Object syncTable = new Object();
 	private SocketProtector protector;
 	private Selector selector;
 
 	private SessionManager() {
-		table = new Hashtable<>();
+		table = new ConcurrentHashMap<>();
 		protector = SocketProtector.getInstance();
 		try {
 			selector = Selector.open();
@@ -85,9 +86,7 @@ public class SessionManager {
 		if(session != null){
 			String key = createKey(session.getDestAddress(), session.getDestPort(),
 					session.getSourceIp(), session.getSourcePort());
-			synchronized(syncTable){
-				table.put(key, session);
-			}
+			table.put(key, session);
 		}
 	}
 
@@ -107,8 +106,10 @@ public class SessionManager {
 		byte[] data = new byte[len];
 		System.arraycopy(buffer, start, data, 0, len);
 		session.setSendingData(data);
+
 		return len;
 	}
+
 	/**
 	 * add data from client which will be sending to the destination server later one when receiving PSH flag.
 	 * @param ip IP Header
@@ -133,38 +134,40 @@ public class SessionManager {
 		return len;
 	}
 
-	Session getSession(int ip, int port, int srcIp, int srcPort){
+	Session getSession(int ip, int port, int srcIp, int srcPort) {
 		String key = createKey(ip, port, srcIp, srcPort);
+
 		return getSessionByKey(key);
 	}
 
-	public Session getSessionByKey(String key){
-		synchronized(syncTable){
-			if(table.containsKey(key)){
-				return table.get(key);
-			}
+	@Nullable public Session getSessionByKey(String key) {
+		if(table.containsKey(key)){
+			return table.get(key);
 		}
+
 		return null;
 	}
-	public Session getSessionByDatagramChannel(DatagramChannel channel){
-		synchronized(syncTable){
-			Collection<Session> sessions = table.values();
-			for (Session session: sessions) {
-				if(session.getUdpChannel() == channel)
-					return session;
-			}
+
+	@Nullable public Session getSessionByDatagramChannel(DatagramChannel channel) {
+		Collection<Session> sessions = table.values();
+
+		for (Session session: sessions) {
+			if(session.getUdpChannel() == channel)
+				return session;
 		}
+
 		return null;
 	}
-	public Session getSessionByChannel(SocketChannel channel){
-		synchronized(syncTable){
-			Collection<Session> sessions = table.values();
-			for (Session session: sessions) {
-				if(session.getSocketChannel() == channel) {
-					return session;
-				}
+
+	public Session getSessionByChannel(SocketChannel channel) {
+		Collection<Session> sessions = table.values();
+
+		for (Session session: sessions) {
+			if(session.getSocketChannel() == channel) {
+				return session;
 			}
 		}
+
 		return null;
 	}
 
@@ -190,10 +193,7 @@ public class SessionManager {
 	 */
 	void closeSession(int ip, int port, int srcIp, int srcPort){
 		String key = createKey(ip, port, srcIp, srcPort);
-		Session session; //getSession(ip, port, srcIp, srcPort);
-		synchronized(syncTable){
-			session = table.remove(key);
-		}
+		Session session = table.remove(key);
 		if(session != null){
 			try {
 				SocketChannel chan = session.getSocketChannel();
@@ -202,87 +202,79 @@ public class SessionManager {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			Log.d(TAG,"closed session -> "+key);
+			Log.d(TAG,"closed session -> " + key);
 		}
 	}
 
-	public void closeSession(Session session){
-		if(session == null)
-			return;
+	public void closeSession(@NonNull Session session){
+		String key = SessionManager.createKey(session.getDestAddress(),
+				session.getDestPort(), session.getSourceIp(),
+				session.getSourcePort());
+		table.remove(key);
 
-		String key = createKey(session.getDestAddress(), session.getDestPort(),
-				session.getSourceIp(), session.getSourcePort());
-		synchronized(syncTable){
-			table.remove(key);
-		}
 		try {
-			SocketChannel chan = session.getSocketChannel();
-			if(chan != null)
-				chan.close();
+			SocketChannel socketChannel = session.getSocketChannel();
+			if(socketChannel != null)
+				socketChannel.close();
 		} catch (IOException e) {
-			e.printStackTrace();
+			Log.e(TAG, e.toString());
 		}
-		Log.d(TAG,"closed session -> "+ key);
-
+		Log.d(TAG,"closed session -> " + key);
 	}
 
-	Session createNewUDPSession(int ip, int port, int srcIp, int srcPort){
-		String keys = createKey(ip,port, srcIp, srcPort);
+	@Nullable Session createNewUDPSession(int ip, int port, int srcIp, int srcPort){
+		String keys = createKey(ip, port, srcIp, srcPort);
 
-		synchronized(syncTable){
-			if (table.containsKey(keys))
-				return null;
-		}
+		if (table.containsKey(keys))
+			return table.get(keys);
 
-		Session session = new Session();
-		session.setDestAddress(ip);
-		session.setDestPort(port);
-		session.setSourceIp(srcIp);
-		session.setSourcePort(srcPort);
-		session.setConnected(false);
-		
+		Session session = new Session(srcIp, srcPort, ip, port);
+
 		DatagramChannel channel;
-		
+
 		try {
 			channel = DatagramChannel.open();
 			channel.socket().setSoTimeout(0);
 			channel.configureBlocking(false);
-			
-		}catch(SocketException ex){
-			ex.printStackTrace();
+
+		} catch(SocketException e) {
+			e.printStackTrace();
 			return null;
 		} catch (IOException e) {
 			e.printStackTrace();
 			return null;
 		}
 		protector.protect(channel.socket());
-		
+
 		//initiate connection to reduce latency
 		String ips = PacketUtil.intToIPAddress(ip);
-		String srcips = PacketUtil.intToIPAddress(srcIp);
-		SocketAddress addr = new InetSocketAddress(ips,port);
-		Log.d(TAG,"initialized connection to remote UDP server: "+ips+":"+port+" from "+srcips+":"+srcPort);
+		String sourceIpAddress = PacketUtil.intToIPAddress(srcIp);
+		SocketAddress socketAddress = new InetSocketAddress(ips, port);
+		Log.d(TAG,"initialized connection to remote UDP server: " + ips + ":" +
+				port + " from " + sourceIpAddress + ":" + srcPort);
 
-		try{
-			channel.connect(addr);
-			session.setConnected(channel.isConnected());
-		}catch(IOException e){
-			e.printStackTrace();
-		}
-		
-				
-		Object isudp = new Object();
 		try {
-			synchronized(SocketNIODataService.syncSelector2){
+			channel.connect(socketAddress);
+			session.setConnected(channel.isConnected());
+		} catch(IOException e) {
+			e.printStackTrace();
+			return null;
+		}
+
+		try {
+			synchronized(SocketNIODataService.syncSelector2) {
 				selector.wakeup();
-				synchronized(SocketNIODataService.syncSelector){
-					SelectionKey selectkey;
-					if(!channel.isConnected()){
-						selectkey = channel.register(selector, SelectionKey.OP_CONNECT | SelectionKey.OP_READ | SelectionKey.OP_WRITE, isudp);
-					}else{
-						selectkey = channel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE, isudp);
+				synchronized(SocketNIODataService.syncSelector) {
+					SelectionKey selectionKey;
+					if (channel.isConnected()) {
+						selectionKey = channel.register(selector,
+								SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+					} else {
+						selectionKey = channel.register(selector,
+								SelectionKey.OP_CONNECT | SelectionKey.OP_READ |
+										SelectionKey.OP_WRITE);
 					}
-					session.setSelectionkey(selectkey);
+					session.setSelectionkey(selectionKey);
 					Log.d(TAG,"Registered udp selector successfully");
 				}
 			}
@@ -291,40 +283,32 @@ public class SessionManager {
 			Log.e(TAG,"failed to register udp channel with selector: "+ e.getMessage());
 			return null;
 		}
-		
+
 		session.setUdpChannel(channel);
-		
-		synchronized(syncTable){
-			if(!table.containsKey(keys)){
-				table.put(keys, session);
-			}else{
-				try {
-					channel.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+
+		if (table.containsKey(keys)) {
+			try {
+				channel.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+				return null;
 			}
+		} else {
+			table.put(keys, session);
 		}
 		Log.d(TAG,"new UDP session successfully created.");
 		return session;
 	}
 
-	Session createNewSession(int ip, int port, int srcIp, int srcPort){
-		String keys = createKey(ip, port, srcIp, srcPort);
-		synchronized(syncTable){
-			if (table.containsKey(keys)) {
-				Log.e(TAG, "Session was already created.");
-				return null;
-			}
+	@Nullable Session createNewSession(int ip, int port, int srcIp, int srcPort){
+		String key = createKey(ip, port, srcIp, srcPort);
+		if (table.containsKey(key)) {
+			Log.e(TAG, "Session was already created.");
+			return null;
 		}
 
-		Session ses = new Session();
-		ses.setDestAddress(ip);
-		ses.setDestPort(port);
-		ses.setSourceIp(srcIp);
-		ses.setSourcePort(srcPort);
-		ses.setConnected(false);
-		
+		Session session = new Session(srcIp, srcPort, ip, port);
+
 		SocketChannel channel;
 		try {
 			channel = SocketChannel.open();
@@ -341,55 +325,56 @@ public class SessionManager {
 			return null;
 		}
 		String ips = PacketUtil.intToIPAddress(ip);
-		Log.d(TAG,"created new socketchannel for "+PacketUtil.intToIPAddress(ip)+":"+port+"-"+PacketUtil.intToIPAddress(srcIp)+":"+srcPort);
-		
+		Log.d(TAG,"created new SocketChannel for " + key);
+
 		protector.protect(channel.socket());
-		
-		Log.d(TAG,"Protected new socketchannel");
-		
+
+		Log.d(TAG,"Protected new SocketChannel");
+
 		//initiate connection to reduce latency
-		SocketAddress addr = new InetSocketAddress(ips, port);
-		Log.d(TAG,"initiate connecting to remote tcp server: "+ips+":"+port);
-		boolean connected = false;
+		SocketAddress socketAddress = new InetSocketAddress(ips, port);
+		Log.d(TAG,"initiate connecting to remote tcp server: " + ips + ":" + port);
+		boolean connected;
 		try{
-			connected = channel.connect(addr);
+			connected = channel.connect(socketAddress);
 		} catch(IOException e) {
 			Log.e(TAG, e.toString());
+			return null;
 		}
-		
-		ses.setConnected(connected);
-		
+
+		session.setConnected(connected);
+
 		//register for non-blocking operation
 		try {
 			synchronized(SocketNIODataService.syncSelector2){
 				selector.wakeup();
 				synchronized(SocketNIODataService.syncSelector){
-					SelectionKey selectkey = channel.register(selector, SelectionKey.OP_CONNECT | SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-					ses.setSelectionkey(selectkey);
+					SelectionKey selectionKey = channel.register(selector,
+							SelectionKey.OP_CONNECT | SelectionKey.OP_READ |
+									SelectionKey.OP_WRITE);
+					session.setSelectionkey(selectionKey);
 					Log.d(TAG,"Registered tcp selector successfully");
 				}
 			}
 		} catch (ClosedChannelException e) {
 			e.printStackTrace();
-			Log.e(TAG,"failed to register tcp channel with selector: "+ e.getMessage());
+			Log.e(TAG,"failed to register tcp channel with selector: " + e.getMessage());
 			return null;
 		}
-		
-		ses.setSocketChannel(channel);
-		
-		synchronized(syncTable){
-			if(!table.containsKey(keys)){
-				table.put(keys, ses);
-			}else{
-				try {
-					channel.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-				return null;
+
+		session.setSocketChannel(channel);
+
+		if (table.containsKey(key)) {
+			try {
+				channel.close();
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
+			return null;
+		} else {
+			table.put(key, session);
 		}
-		return ses;
+		return session;
 	}
 	/**
 	 * create session key based on destination ip+port and source ip+port
@@ -399,8 +384,8 @@ public class SessionManager {
 	 * @param srcPort Source Port
 	 * @return String
 	 */
-	public String createKey(int ip, int port, int srcIp, int srcPort){
-		return PacketUtil.intToIPAddress(ip) + ":" + port + "-" +
-				PacketUtil.intToIPAddress(srcIp) + ":" + srcPort;
+	public static String createKey(int ip, int port, int srcIp, int srcPort){
+		return PacketUtil.intToIPAddress(srcIp) + ":" + srcPort + "=" +
+				PacketUtil.intToIPAddress(ip) + ":" + port;
 	}
 }

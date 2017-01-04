@@ -20,14 +20,13 @@ import java.util.List;
 
 import android.util.Log;
 
-import com.lipisoft.toyshark.SessionManager;
-
 /**
  * Publish packet data to subscriber who implements interface IReceivePacket
  * @author Borey Sao
  * Date: June 15, 2014
  */
 public class SocketDataPublisher implements Runnable {
+	private static final String TAG = "SocketDataPublisher";
 	private List<IReceivePacket> subscribers;
 	private SocketData data;
 	private volatile boolean isShuttingDown = false;
@@ -49,7 +48,7 @@ public class SocketDataPublisher implements Runnable {
 
 	@Override
 	public void run() {
-		Log.d(SessionManager.TAG,"BackgroundWriter starting...");
+		Log.d(TAG,"BackgroundWriter starting...");
 		
 		while(!isShuttingDown()) {
 			byte[] packetData = data.getData();
@@ -65,9 +64,9 @@ public class SocketDataPublisher implements Runnable {
 				}
 			}
 		}
-		Log.d(SessionManager.TAG,"BackgroundWriter ended");
+		Log.d(TAG,"BackgroundWriter ended");
 	}
-	public boolean isShuttingDown() {
+	private boolean isShuttingDown() {
 		return isShuttingDown;
 	}
 	public void setShuttingDown(boolean shuttingDown) {
