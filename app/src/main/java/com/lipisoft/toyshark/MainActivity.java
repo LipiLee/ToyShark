@@ -658,11 +658,9 @@ public class MainActivity extends AppCompatActivity {
 		ConnectivityManager connectivity = (ConnectivityManager)
 				getSystemService(Context.CONNECTIVITY_SERVICE);
 		if (connectivity != null) {
-			for(Network network : connectivity.getAllNetworks()) {
-				NetworkInfo networkInfo = connectivity.getNetworkInfo(network);
-				if (networkInfo.getState().equals(NetworkInfo.State.CONNECTED)) {
-					return true;
-				}
+			NetworkInfo networkInfo = connectivity.getActiveNetworkInfo();
+			if (networkInfo != null && networkInfo.isConnected()) {
+				return true;
 			}
 		}
 		return false;
