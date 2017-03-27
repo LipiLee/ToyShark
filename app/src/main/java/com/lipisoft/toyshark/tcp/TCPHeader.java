@@ -17,13 +17,14 @@ package com.lipisoft.toyshark.tcp;
 
 import android.support.annotation.Nullable;
 
+import com.lipisoft.toyshark.transport.ITransportHeader;
 /**
  * data structure for TCP Header
  * @author Borey Sao
  * Date: May 8, 2014
  *
  */
-public class TCPHeader {
+public class TCPHeader implements ITransportHeader{
 	private int sourcePort;
 	private int destinationPort;
 	private long sequenceNumber; // 32 bits

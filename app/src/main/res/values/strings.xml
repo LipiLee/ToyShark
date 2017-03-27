@@ -5,4 +5,12 @@
     <string name="quit">Quit</string>
     <string name="try_again">Try again</string>
     <string name="unknown">Unknown</string>
+    <string name="number">No.</string>
+    <string name="time">Time</string>
+    <string name="source">Source</string>
+    <string name="destination">Destination</string>
+    <string name="protocol">Protocol</string>
+    <string name="length">Length</string>
+    <string name="info">Info</string>
+    <string name="no_network_information">No active network connection in your device, please connect to network and start again.</string>
 </resources>

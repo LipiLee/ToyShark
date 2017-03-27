@@ -22,7 +22,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
-import android.net.Network;
 import android.net.NetworkInfo;
 import android.net.VpnService;
 import android.os.Bundle;
@@ -109,6 +108,10 @@ public class MainActivity extends AppCompatActivity {
 		} else {
 			if (networkAndAirplaneModeCheck())
 				startVPN();
+			else {
+				showInfoDialog(getResources().getString(R.string.app_name),
+						getResources().getString(R.string.no_network_information));
+			}
 		}
 	}
 
@@ -119,99 +122,44 @@ public class MainActivity extends AppCompatActivity {
 				if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 					if (networkAndAirplaneModeCheck()) {
 						startVPN();
+					} else {
+						showInfoDialog(getResources().getString(R.string.app_name),
+								getResources().getString(R.string.no_network_information));
 					}
 				}
 		}
-	}
-
-	private byte getProtocol(@NonNull Packet packet) {
-		final IPv4Header iPv4Header = packet.getIpHeader();
-
-		if (iPv4Header != null) {
-			return iPv4Header.getProtocol();
-		}
-
-		return -1;
-	}
-
-	private int getDestinationPort(@NonNull Packet packet) {
-		final byte protocol = getProtocol(packet);
-
-		if (protocol == -1) {
-			return 0;
-		} else if (protocol == TCP) {
-			final TCPHeader tcpHeader = packet.getTcpHeader();
-			if (tcpHeader == null) {
-				return 0;
-			} else {
-				return tcpHeader.getDestinationPort();
-			}
-		} else if (protocol == UDP) {
-			final UDPHeader udpHeader = packet.getUdpHeader();
-			if (udpHeader == null) {
-				return 0;
-			} else {
-				return udpHeader.getDestinationPort();
-			}
-		}
-
-		return 0;
-	}
-
-	private int getSourcePort(@NonNull Packet packet) {
-		final byte protocol = getProtocol(packet);
-
-		if (protocol == -1) {
-			return 0;
-		} else if (protocol == TCP) {
-			final TCPHeader tcpHeader = packet.getTcpHeader();
-			if (tcpHeader == null) {
-				return 0;
-			} else {
-				return tcpHeader.getSourcePort();
-			}
-		} else if (protocol == UDP) {
-			final UDPHeader udpHeader = packet.getUdpHeader();
-			if (udpHeader == null) {
-				return 0;
-			} else {
-				return udpHeader.getSourcePort();
-			}
-		}
-
-		return 0;
 	}
 
 	private void makeTableHeader() {
 		TableRow headerTableRow = new TableRow(this);
 
 		TextView noTextView = new TextView(this);
-		noTextView.setText("No.");
+		noTextView.setText(getResources().getText(R.string.number));
 		headerTableRow.addView(noTextView);
 
 		TextView timeTextView = new TextView(this);
-		timeTextView.setText("Time");
+		timeTextView.setText(getResources().getText(R.string.time));
 		headerTableRow.addView(timeTextView);
 
 		TextView sourceTextView = new TextView(this);
-		sourceTextView.setText("Source");
+		sourceTextView.setText(getResources().getText(R.string.source));
 		headerTableRow.addView(sourceTextView);
 
 		TextView destinationTextView = new TextView(this);
-		destinationTextView.setText("Destination");
+		destinationTextView.setText(getResources().getText(R.string.destination));
 		headerTableRow.addView(destinationTextView);
 
 		TextView protocolTextView = new TextView(this);
-		protocolTextView.setText("Protocol");
+		protocolTextView.setText(getResources().getText(R.string.protocol));
 		headerTableRow.addView(protocolTextView);
 
 		TextView lengthTextView = new TextView(this);
-		lengthTextView.setText("Length");
+		lengthTextView.setText(getResources().getText(R.string.length));
 		lengthTextView.setPadding(20, 0, 20, 0);
 		headerTableRow.addView(lengthTextView);
 
 		TextView infoTextView = new TextView(this);
-		infoTextView.setText("Info");
+		infoTextView.setText(getResources().getText(R.string.info));
 		headerTableRow.addView(infoTextView);
 
 		tableLayout.addView(headerTableRow);
@@ -219,19 +167,15 @@ public class MainActivity extends AppCompatActivity {
 
 	private void updateTableLayout(@NonNull final Packet packet) {
 		final int color;
-		final byte protocol = getProtocol(packet);
-		if (protocol == -1) {
-			Log.e(TAG, "Unknown Protocol in Packet Class");
-			return;
-		}
+		final byte protocol = packet.getProtocol();
 
-		final int destinationPort = getDestinationPort(packet);
+		final int destinationPort = packet.getDestnationPort();
 		if (destinationPort == 0) {
 			Log.e(TAG, "A Packet instance invalid for destination port");
 			return;
 		}
 
-		final int sourcePort = getSourcePort(packet);
+		final int sourcePort = packet.getSourcePort();
 		if (sourcePort == 0) {
 			Log.e(TAG, "A Packet instance invalid for source port");
 			return;
@@ -295,10 +239,7 @@ public class MainActivity extends AppCompatActivity {
 
 		TextView lengthTextView = new TextView(this);
 		lengthTextView.setPadding(10, 0, 10, 0);
-		if (packet.getBuffer() == null)
-			lengthTextView.setText("0");
-		else
-			lengthTextView.setText(String.valueOf(packet.getBuffer().length));
+		lengthTextView.setText(String.valueOf(packet.getBuffer().length));
 		lengthTextView.setBackgroundColor(color);
 		lengthTextView.setTextColor(0xFF000000);
 		tableRow.addView(lengthTextView);
@@ -330,10 +271,6 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	private void updatePacketDetailView(@NonNull Packet packet) {
-		if (packet.getTcpHeader() == null) {
-			return;
-		}
-
 		List<Map<String, String>> groupList = new ArrayList<>();
 		List<List<Map<String, String>>> childList = new ArrayList<>();
 
@@ -344,7 +281,7 @@ public class MainActivity extends AppCompatActivity {
 		ipGroupMap.put(NAME, "Internet Protocol Version 4, Src: " + src + ", Dst: " + dst);
 		groupList.add(ipGroupMap);
 
-		TCPHeader tcpHeader = packet.getTcpHeader();
+		TCPHeader tcpHeader = (TCPHeader) packet.getTransportHeader();
 		int len = packet.getBuffer().length - iPv4Header.getIPHeaderLength() - tcpHeader.getTCPHeaderLength();
 		Map<String, String> tcpGroupMap = new Hashtable<>();
 		tcpGroupMap.put(NAME, "Transmission Control Protocol, Src Port: " +
@@ -467,10 +404,7 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	@Nullable private String makeTcpInfo(@NonNull Packet packet) {
-		TCPHeader tcpHeader = packet.getTcpHeader();
-
-		if (tcpHeader == null)
-			return null;
+		TCPHeader tcpHeader = (TCPHeader) packet.getTransportHeader();
 
 		StringBuilder tcpInfo = new StringBuilder();
 		tcpInfo.append(tcpHeader.getSourcePort()).append("->")
@@ -494,17 +428,14 @@ public class MainActivity extends AppCompatActivity {
 		}
 
 		tcpInfo.append("Win=").append(tcpHeader.getWindowSize()).append(" ");
-		int length = packet.getBuffer().length - packet.getIpHeader().getIPHeaderLength() - packet.getTcpHeader().getTCPHeaderLength();
+		int length = packet.getBuffer().length - packet.getIpHeader().getIPHeaderLength() - tcpHeader.getTCPHeaderLength();
 		tcpInfo.append("Len=").append(length);
 
 		return tcpInfo.toString();
 	}
 
 	@Nullable String makeUdpInfo(@NonNull Packet packet) {
-		final UDPHeader udpHeader = packet.getUdpHeader();
-
-		if (udpHeader == null)
-			return null;
+		final UDPHeader udpHeader = (UDPHeader) packet.getTransportHeader();
 
 		final StringBuilder udpInfo = new StringBuilder();
 		final int sourcePort = udpHeader.getSourcePort();
@@ -518,7 +449,7 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	@Nullable private String makeInfo(@NonNull Packet packet) {
-		int protocol = getProtocol(packet);
+		int protocol = packet.getProtocol();
 
 		if (protocol == TCP)
 			return makeTcpInfo(packet);
@@ -557,7 +488,7 @@ public class MainActivity extends AppCompatActivity {
 	 *
 	 * @param networkInterfaceName Network interface Name on Linux, for example tun0
 	 * @return true if interface exists and is active
-	 * @throws Exception
+	 * @throws Exception throws Exception
 	 */
 	private boolean checkForActiveInterface(String networkInterfaceName) throws Exception {
 		List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
@@ -655,8 +586,7 @@ public class MainActivity extends AppCompatActivity {
 	 *  @return boolean
 	 */
 	private boolean isConnectedToInternet() {
-		ConnectivityManager connectivity = (ConnectivityManager)
-				getSystemService(Context.CONNECTIVITY_SERVICE);
+		ConnectivityManager connectivity = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 		if (connectivity != null) {
 			NetworkInfo networkInfo = connectivity.getActiveNetworkInfo();
 			if (networkInfo != null && networkInfo.isConnected()) {
@@ -667,12 +597,13 @@ public class MainActivity extends AppCompatActivity {
 	}
 
 	private boolean networkAndAirplaneModeCheck() {
-		if (!isConnectedToInternet()) {
-			String title = "ToyShark";
-			String message = "No network connection in your phone, Connect to network and start again";
-			showInfoDialog(title, message);
-			return false;
-		}
-		return true;
+//		if (!isConnectedToInternet()) {
+//			final String title = "ToyShark";
+//			final String message = "No network connection in your phone, Connect to network and start again";
+//			showInfoDialog(title, message);
+//			return false;
+//		}
+//		return true;
+		return isConnectedToInternet();
 	}
 }

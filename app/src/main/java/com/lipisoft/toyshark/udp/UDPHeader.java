@@ -16,16 +16,19 @@
 
 package com.lipisoft.toyshark.udp;
 
+import com.lipisoft.toyshark.transport.ITransportHeader;
+
 /**
  * data structure for UDP packet header
  * @author Borey Sao
  * Date: June 24, 2014
  */
-public class UDPHeader {
+public class UDPHeader implements ITransportHeader{
 	private int sourcePort;
 	private int destinationPort;
 	private int length;
 	private int checksum;
+
 	UDPHeader(int srcPort, int destPort, int length, int checksum){
 		this.sourcePort = srcPort;
 		this.destinationPort = destPort;

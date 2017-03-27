@@ -313,8 +313,6 @@ public class TCPPacketFactory {
 	 * @return class Packet
 	 */
 	public static Packet createSynAckPacketData(IPv4Header ip, TCPHeader tcp){
-		Packet packet = new Packet();
-		
 		IPv4Header ipheader = IPPacketFactory.copyIPv4Header(ip);
 		TCPHeader tcpheader = copyTCPHeader(tcp);
 		
@@ -352,11 +350,7 @@ public class TCPPacketFactory {
 		int sendertimestamp = (int)currentdate.getTime();
 		tcpheader.setTimeStampSender(sendertimestamp);
 		
-		packet.setIpHeader(ipheader);
-		packet.setTcpHeader(tcpheader);
-
-		packet.setBuffer(createPacketData(ipheader, tcpheader, null));
-		return packet;
+		return new Packet(ipheader, tcpheader, createPacketData(ipheader, tcpheader, null));
 	}
 
 	/**
@@ -398,12 +392,8 @@ public class TCPPacketFactory {
 		//write new checksum back to array
 		System.arraycopy(tcpchecksum, 0, buffer,tcpstart + 16, 2);
 
-		Packet packet = new Packet();
-		packet.setIpHeader(ipheader);
-		packet.setTcpHeader(tcpheader);
-		packet.setBuffer(buffer);
-
-		Message message = MainActivity.mHandler.obtainMessage(MainActivity.PACKET, packet);
+		Message message = MainActivity.mHandler.obtainMessage(MainActivity.PACKET,
+				new Packet(ipheader, tcpheader, buffer));
 		message.sendToTarget();
 		return buffer;
 	}
@@ -477,7 +467,7 @@ public class TCPPacketFactory {
 	 * @param buffer array of byte
 	 * @param start position to start extracting data
 	 * @return a new instance of TCPHeader
-	 * @throws PacketHeaderException
+	 * @throws PacketHeaderException throws PacketHeaderException
 	 */
 	public static TCPHeader createTCPHeader(byte[] buffer, int start) throws PacketHeaderException{
 		if(buffer.length < start + 20){

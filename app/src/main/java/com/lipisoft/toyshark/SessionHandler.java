@@ -25,6 +25,7 @@ import com.lipisoft.toyshark.socket.SocketData;
 import com.lipisoft.toyshark.tcp.PacketHeaderException;
 import com.lipisoft.toyshark.tcp.TCPHeader;
 import com.lipisoft.toyshark.tcp.TCPPacketFactory;
+import com.lipisoft.toyshark.transport.ITransportHeader;
 import com.lipisoft.toyshark.udp.UDPHeader;
 import com.lipisoft.toyshark.udp.UDPPacketFactory;
 import com.lipisoft.toyshark.util.PacketUtil;
@@ -206,8 +207,8 @@ class SessionHandler {
 	/**
 	 * handle each packet from each vpn client
 	 * @param data packet data
-	 * @param length packet length
-	 * @throws PacketHeaderException
+	 * @param length packet length to be read
+	 * @throws PacketHeaderException throws PacketHeaderException
 	 */
 	void handlePacket(byte[] data, int length) throws PacketHeaderException {
 		byte[] clientPacketData = new byte[length];
@@ -220,34 +221,30 @@ class SessionHandler {
 			return;
 		}
 
-		UDPHeader udpheader = null;
-		TCPHeader tcpheader = null;
-		Packet packet = new Packet();
-		packet.setIpHeader(ipHeader);
+		final ITransportHeader transportHeader;
 		if(ipHeader.getProtocol() == 6) {
-			tcpheader = TCPPacketFactory.createTCPHeader(clientPacketData, ipHeader.getIPHeaderLength());
-			packet.setTcpHeader(tcpheader);
-			packet.setBuffer(clientPacketData);
+			transportHeader = TCPPacketFactory.createTCPHeader(clientPacketData, ipHeader.getIPHeaderLength());
 		} else if(ipHeader.getProtocol() == 17) {
-			udpheader = UDPPacketFactory.createUDPHeader(clientPacketData, ipHeader.getIPHeaderLength());
+			transportHeader = UDPPacketFactory.createUDPHeader(clientPacketData, ipHeader.getIPHeaderLength());
 		} else {
 			Log.e(TAG, "******===> Unsupported protocol: " + ipHeader.getProtocol());
 			return;
 		}
+		Packet packet = new Packet(ipHeader, transportHeader, clientPacketData);
 
 		Message message = MainActivity.mHandler.obtainMessage(MainActivity.PACKET, packet);
 		message.sendToTarget();
 
-		if(tcpheader != null){
-			handleTCPPacket(clientPacketData, ipHeader, tcpheader);
-		}else if(udpheader != null){
-			Log.d(TAG, "-------- UDP packet from client ---------");
-			String str = PacketUtil.getUDPoutput(ipHeader, udpheader);
-			Log.d(TAG, str);
-			Log.d(TAG, "------ end UDP packet from client -------");
-			str = PacketUtil.bytesToStringArray(clientPacketData);
-			Log.d(TAG, str);
-			handleUDPPacket(clientPacketData, ipHeader, udpheader);
+		if(transportHeader instanceof TCPHeader){
+			handleTCPPacket(clientPacketData, ipHeader, (TCPHeader) transportHeader);
+		}else if(ipHeader.getProtocol() == 17){
+//			Log.d(TAG, "-------- UDP packet from client ---------");
+//			String str = PacketUtil.getUDPoutput(ipHeader, udpheader);
+//			Log.d(TAG, str);
+//			Log.d(TAG, "------ end UDP packet from client -------");
+//			str = PacketUtil.bytesToStringArray(clientPacketData);
+//			Log.d(TAG, str);
+			handleUDPPacket(clientPacketData, ipHeader, (UDPHeader) transportHeader);
 		}
 	}
 
@@ -426,7 +423,7 @@ class SessionHandler {
 		ip.setIdentification(0);
 		Packet packet = TCPPacketFactory.createSynAckPacketData(ip, tcp);
 		
-		TCPHeader tcpheader = packet.getTcpHeader();
+		TCPHeader tcpheader = (TCPHeader) packet.getTransportHeader();
 		
 		Session session = sessionManager.createNewSession(ip.getDestinationIP(),
 				tcp.getDestinationPort(), ip.getSourceIP(), tcp.getSourcePort());

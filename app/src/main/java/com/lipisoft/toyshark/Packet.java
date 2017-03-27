@@ -16,12 +16,10 @@
 
 package com.lipisoft.toyshark;
 
-import android.support.annotation.Nullable;
-import android.util.Log;
+import android.support.annotation.NonNull;
 
 import com.lipisoft.toyshark.ip.IPv4Header;
-import com.lipisoft.toyshark.tcp.TCPHeader;
-import com.lipisoft.toyshark.udp.UDPHeader;
+import com.lipisoft.toyshark.transport.ITransportHeader;
 
 /**
  * Data structure that encapsulate both IPv4Header and TCPHeader
@@ -29,46 +27,44 @@ import com.lipisoft.toyshark.udp.UDPHeader;
  * Date: May 27, 2014
  */
 public class Packet {
-	private static final String TAG = "PACKET";
-	private static final int UDP_HEADER_LENGTH = 8;
-	private IPv4Header ipHeader;
-	private TCPHeader tcpheader;
-	private UDPHeader udpHeader;
-	private byte[] buffer;
+	@NonNull private IPv4Header ipHeader;
+	@NonNull private ITransportHeader transportHeader;
+	@NonNull private byte[] buffer;
 
-	public UDPHeader getUdpHeader() {
-		return udpHeader;
+	public Packet(IPv4Header ipHeader, ITransportHeader transportHeader, byte[] data) {
+		this.ipHeader = ipHeader;
+		this.transportHeader = transportHeader;
+		buffer = data;
 	}
 
-	public void setUdpHeader(UDPHeader udpHeader) {
-		this.udpHeader = udpHeader;
+	public byte getProtocol() {
+		return ipHeader.getProtocol();
 	}
 
+	@NonNull
+	public ITransportHeader getTransportHeader() {
+		return transportHeader;
+	}
+
+	public int getSourcePort() {
+		return transportHeader.getSourcePort();
+	}
+
+	public int getDestnationPort() {
+		return transportHeader.getDestinationPort();
+	}
+
+	@NonNull
 	public IPv4Header getIpHeader() {
 		return ipHeader;
-	}
-
-	public void setIpHeader(IPv4Header ipHeader) {
-		this.ipHeader = ipHeader;
-	}
-
-	public TCPHeader getTcpHeader() {
-		return tcpheader;
-	}
-
-	public void setTcpHeader(TCPHeader tcpheader) {
-		this.tcpheader = tcpheader;
 	}
 
 	/**
 	 * the whole packet data as an array of byte
 	 * @return byte[]
 	 */
+	@NonNull
 	public byte[] getBuffer() {
 		return buffer;
-	}
-
-	public void setBuffer(byte[] buffer) {
-		this.buffer = buffer;
 	}
 }
