@@ -19,15 +19,15 @@ package com.lipisoft.toyshark;
 import java.io.IOException;
 import java.util.Date;
 
-import com.lipisoft.toyshark.ip.IPPacketFactory;
-import com.lipisoft.toyshark.ip.IPv4Header;
+import com.lipisoft.toyshark.network.ip.IPPacketFactory;
+import com.lipisoft.toyshark.network.ip.IPv4Header;
 import com.lipisoft.toyshark.socket.SocketData;
-import com.lipisoft.toyshark.tcp.PacketHeaderException;
-import com.lipisoft.toyshark.tcp.TCPHeader;
-import com.lipisoft.toyshark.tcp.TCPPacketFactory;
+import com.lipisoft.toyshark.transport.tcp.PacketHeaderException;
+import com.lipisoft.toyshark.transport.tcp.TCPHeader;
+import com.lipisoft.toyshark.transport.tcp.TCPPacketFactory;
 import com.lipisoft.toyshark.transport.ITransportHeader;
-import com.lipisoft.toyshark.udp.UDPHeader;
-import com.lipisoft.toyshark.udp.UDPPacketFactory;
+import com.lipisoft.toyshark.transport.udp.UDPHeader;
+import com.lipisoft.toyshark.transport.udp.UDPPacketFactory;
 import com.lipisoft.toyshark.util.PacketUtil;
 
 import android.os.Message;

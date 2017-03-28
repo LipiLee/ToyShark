@@ -24,9 +24,9 @@ import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
-import com.lipisoft.toyshark.ip.IPv4Header;
-import com.lipisoft.toyshark.tcp.TCPHeader;
-import com.lipisoft.toyshark.udp.UDPHeader;
+import com.lipisoft.toyshark.network.ip.IPv4Header;
+import com.lipisoft.toyshark.transport.tcp.TCPHeader;
+import com.lipisoft.toyshark.transport.udp.UDPHeader;
 
 /**
  * store information about a socket connection from a VPN client.

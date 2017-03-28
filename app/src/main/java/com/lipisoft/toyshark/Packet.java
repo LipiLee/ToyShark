@@ -18,7 +18,7 @@ package com.lipisoft.toyshark;
 
 import android.support.annotation.NonNull;
 
-import com.lipisoft.toyshark.ip.IPv4Header;
+import com.lipisoft.toyshark.network.ip.IPv4Header;
 import com.lipisoft.toyshark.transport.ITransportHeader;
 
 /**
@@ -50,7 +50,7 @@ public class Packet {
 		return transportHeader.getSourcePort();
 	}
 
-	public int getDestnationPort() {
+	public int getDestinationPort() {
 		return transportHeader.getDestinationPort();
 	}
 

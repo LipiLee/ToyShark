@@ -33,7 +33,7 @@ import com.lipisoft.toyshark.socket.IReceivePacket;
 import com.lipisoft.toyshark.socket.SocketDataPublisher;
 import com.lipisoft.toyshark.socket.SocketNIODataService;
 import com.lipisoft.toyshark.socket.SocketProtector;
-import com.lipisoft.toyshark.tcp.PacketHeaderException;
+import com.lipisoft.toyshark.transport.tcp.PacketHeaderException;
 
 import java.io.File;
 import java.io.FileInputStream;

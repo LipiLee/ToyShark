@@ -43,9 +43,10 @@ import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 
-import com.lipisoft.toyshark.ip.IPv4Header;
-import com.lipisoft.toyshark.tcp.TCPHeader;
-import com.lipisoft.toyshark.udp.UDPHeader;
+import com.lipisoft.toyshark.network.ip.IPv4Header;
+import com.lipisoft.toyshark.transport.tcp.TCPHeader;
+import com.lipisoft.toyshark.transport.ITransportHeader;
+import com.lipisoft.toyshark.transport.udp.UDPHeader;
 import com.lipisoft.toyshark.util.PacketUtil;
 
 import java.net.NetworkInterface;
@@ -169,7 +170,7 @@ public class MainActivity extends AppCompatActivity {
 		final int color;
 		final byte protocol = packet.getProtocol();
 
-		final int destinationPort = packet.getDestnationPort();
+		final int destinationPort = packet.getDestinationPort();
 		if (destinationPort == 0) {
 			Log.e(TAG, "A Packet instance invalid for destination port");
 			return;
@@ -270,26 +271,7 @@ public class MainActivity extends AppCompatActivity {
 		tableLayout.addView(tableRow);
 	}
 
-	private void updatePacketDetailView(@NonNull Packet packet) {
-		List<Map<String, String>> groupList = new ArrayList<>();
-		List<List<Map<String, String>>> childList = new ArrayList<>();
-
-		IPv4Header iPv4Header = packet.getIpHeader();
-		String src = PacketUtil.intToIPAddress(iPv4Header.getSourceIP());
-		String dst = PacketUtil.intToIPAddress(iPv4Header.getDestinationIP());
-		Map<String, String> ipGroupMap = new Hashtable<>();
-		ipGroupMap.put(NAME, "Internet Protocol Version 4, Src: " + src + ", Dst: " + dst);
-		groupList.add(ipGroupMap);
-
-		TCPHeader tcpHeader = (TCPHeader) packet.getTransportHeader();
-		int len = packet.getBuffer().length - iPv4Header.getIPHeaderLength() - tcpHeader.getTCPHeaderLength();
-		Map<String, String> tcpGroupMap = new Hashtable<>();
-		tcpGroupMap.put(NAME, "Transmission Control Protocol, Src Port: " +
-				tcpHeader.getSourcePort() + ", Dst Port: " + tcpHeader.getDestinationPort() +
-				", Seq: " + tcpHeader.getSequenceNumber() + ", Ack: " + tcpHeader.getAckNumber() +
-				", Len: " + len);
-		groupList.add(tcpGroupMap);
-
+	private List<Map<String, String>> makeNetworkLayerDetail(@NonNull IPv4Header iPv4Header) {
 		List<Map<String, String>> ipChildList = new ArrayList<>();
 
 		Map<String, String> ipVersionMap = new HashMap<>();
@@ -337,12 +319,17 @@ public class MainActivity extends AppCompatActivity {
 //        byte[] checksum = {iPv4Header.getHeaderChecksum()};
 //        child.add("Header checksum: " + iPv4Header.getHeaderChecksum());
 		Map<String, String> sourceMap = new HashMap<>();
-		sourceMap.put(NAME, "Source: " + src);
+		sourceMap.put(NAME, "Source: " + PacketUtil.intToIPAddress(iPv4Header.getSourceIP()));
 		ipChildList.add(sourceMap);
 
 		Map<String, String> destinationMap = new HashMap<>();
-		destinationMap.put(NAME, "Destination: " + dst);
+		destinationMap.put(NAME, "Destination: " + PacketUtil.intToIPAddress(iPv4Header.getDestinationIP()));
 		ipChildList.add(destinationMap);
+
+		return ipChildList;
+	}
+
+	private List<Map<String, String>> makeTCPDetail(TCPHeader tcpHeader) {
 
 		List<Map<String, String>> tcpChildList = new ArrayList<>();
 
@@ -382,8 +369,68 @@ public class MainActivity extends AppCompatActivity {
 		urgentPointerMap.put(NAME, "Urgent pointer: " + tcpHeader.getUrgentPointer());
 		tcpChildList.add(urgentPointerMap);
 
-		childList.add(ipChildList);
-		childList.add(tcpChildList);
+		return tcpChildList;
+	}
+
+	private List<Map<String, String>> makeUDPDetail(UDPHeader udpHeader) {
+		List<Map<String, String>> udpChildList = new ArrayList<>();
+
+		Map<String, String> sourcePort = new HashMap<>();
+		sourcePort.put(NAME, "Source Port: " + udpHeader.getSourcePort());
+		udpChildList.add(sourcePort);
+
+		Map<String, String> destinationPort = new HashMap<>();
+		destinationPort.put(NAME, "Destinatioin Port: " + udpHeader.getDestinationPort());
+		udpChildList.add(destinationPort);
+
+		Map<String, String> length = new HashMap<>();
+		length.put(NAME, "Length: " + udpHeader.getLength());
+		udpChildList.add(length);
+
+		Map<String, String> checksum = new HashMap<>();
+		checksum.put(NAME, "Checksum: " + udpHeader.getChecksum());
+		udpChildList.add(checksum);
+
+		return udpChildList;
+	}
+
+	private void updatePacketDetailView(@NonNull Packet packet) {
+		List<Map<String, String>> groupList = new ArrayList<>();
+		List<List<Map<String, String>>> childList = new ArrayList<>();
+
+		IPv4Header iPv4Header = packet.getIpHeader();
+		String src = PacketUtil.intToIPAddress(iPv4Header.getSourceIP());
+		String dst = PacketUtil.intToIPAddress(iPv4Header.getDestinationIP());
+		Map<String, String> ipGroupMap = new Hashtable<>();
+		ipGroupMap.put(NAME, "Internet Protocol Version 4, Src: " + src + ", Dst: " + dst);
+
+		groupList.add(ipGroupMap);
+
+		childList.add(makeNetworkLayerDetail(iPv4Header));
+
+		ITransportHeader transportHeader = packet.getTransportHeader();
+		if (transportHeader instanceof TCPHeader) {
+			TCPHeader tcpHeader = (TCPHeader) packet.getTransportHeader();
+			int len = packet.getBuffer().length - iPv4Header.getIPHeaderLength() - tcpHeader.getTCPHeaderLength();
+			Map<String, String> tcpGroupMap = new Hashtable<>();
+			tcpGroupMap.put(NAME, "Transmission Control Protocol, Src Port: " +
+					tcpHeader.getSourcePort() + ", Dst Port: " + tcpHeader.getDestinationPort() +
+					", Seq: " + tcpHeader.getSequenceNumber() + ", Ack: " + tcpHeader.getAckNumber() +
+					", Len: " + len);
+			groupList.add(tcpGroupMap);
+
+			childList.add(makeTCPDetail(tcpHeader));
+
+		} else if (transportHeader instanceof UDPHeader) {
+			UDPHeader udpHeader = (UDPHeader) packet.getTransportHeader();
+			Map<String, String> udpGroupMap = new HashMap<>();
+			udpGroupMap.put(NAME, "User Datagram Protocol, Src Port: " + udpHeader.getSourcePort() + ", Dst Port: " + udpHeader.getDestinationPort());
+			groupList.add(udpGroupMap);
+			childList.add(makeUDPDetail(udpHeader));
+		} else {
+			Log.e(NAME, "Unknown Transport Protocol");
+			return;
+		}
 
 		ExpandableListView expandableListView = (ExpandableListView) findViewById(R.id.packetDetailView);
 		try {

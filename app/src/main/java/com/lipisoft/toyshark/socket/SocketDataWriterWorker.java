@@ -6,7 +6,7 @@ import android.util.Log;
 import com.lipisoft.toyshark.IClientPacketWriter;
 import com.lipisoft.toyshark.Session;
 import com.lipisoft.toyshark.SessionManager;
-import com.lipisoft.toyshark.tcp.TCPPacketFactory;
+import com.lipisoft.toyshark.transport.tcp.TCPPacketFactory;
 import com.lipisoft.toyshark.util.PacketUtil;
 
 import java.io.IOException;

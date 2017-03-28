@@ -14,21 +14,22 @@
  * limitations under the License.
 */
 
-package com.lipisoft.toyshark.tcp;
+package com.lipisoft.toyshark.transport.tcp;
+
+import android.os.Message;
+import android.support.annotation.Nullable;
+import android.util.Log;
+
+import com.lipisoft.toyshark.MainActivity;
+import com.lipisoft.toyshark.Packet;
+import com.lipisoft.toyshark.network.ip.IPPacketFactory;
+import com.lipisoft.toyshark.network.ip.IPv4Header;
+import com.lipisoft.toyshark.util.PacketUtil;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Date;
 import java.util.Random;
-
-import com.lipisoft.toyshark.MainActivity;
-import com.lipisoft.toyshark.Packet;
-import com.lipisoft.toyshark.ip.IPPacketFactory;
-import com.lipisoft.toyshark.ip.IPv4Header;
-import com.lipisoft.toyshark.util.PacketUtil;
-
-import android.os.Message;
-import android.util.Log;
 
 /**
  * class to create IPv4 Header, TCP header, and packet data.
@@ -355,46 +356,42 @@ public class TCPPacketFactory {
 
 	/**
 	 * create packet data from IP Header, TCP header and data
-	 * @param ipheader IPv4Header object
+	 * @param ipHeader IPv4Header object
 	 * @param tcpheader TCPHeader object
 	 * @param data array of byte (packet body)
 	 * @return array of byte
 	 */
-    private static byte[] createPacketData(IPv4Header ipheader, TCPHeader tcpheader, byte[] data){
-		int datalength = 0;
+    private static byte[] createPacketData(IPv4Header ipHeader, TCPHeader tcpheader, @Nullable byte[] data){
+		int dataLength = 0;
 		if(data != null){
-			datalength = data.length;
+			dataLength = data.length;
 		}
-		byte[] buffer = new byte[ipheader.getIPHeaderLength() + tcpheader.getTCPHeaderLength() + datalength];
-		byte[] ipbuffer = IPPacketFactory.createIPv4HeaderData(ipheader);
-		byte[] tcpbuffer = createTCPHeaderData(tcpheader);
+		byte[] buffer = new byte[ipHeader.getIPHeaderLength() + tcpheader.getTCPHeaderLength() + dataLength];
+		byte[] ipBuffer = IPPacketFactory.createIPv4HeaderData(ipHeader);
+		byte[] tcpBuffer = createTCPHeaderData(tcpheader);
 		
-		System.arraycopy(ipbuffer, 0, buffer, 0, ipbuffer.length);
-		System.arraycopy(tcpbuffer, 0, buffer, ipbuffer.length, tcpbuffer.length);
-		if(datalength > 0){
-			int offset = ipbuffer.length + tcpbuffer.length;
-			System.arraycopy(data, 0, buffer, offset, datalength);
+		System.arraycopy(ipBuffer, 0, buffer, 0, ipBuffer.length);
+		System.arraycopy(tcpBuffer, 0, buffer, ipBuffer.length, tcpBuffer.length);
+		if(dataLength > 0){
+			int offset = ipBuffer.length + tcpBuffer.length;
+			System.arraycopy(data, 0, buffer, offset, dataLength);
 		}
 		//calculate checksum for both IP and TCP header
-		byte[] zero = {0,0};
-		//zero out checksum first before calculation
-		System.arraycopy(zero, 0, buffer, 10, 2);
-		byte[] ipchecksum = PacketUtil.calculateChecksum(buffer, 0, ipbuffer.length);
+		byte[] ipChecksum = PacketUtil.calculateChecksum(buffer, 0, ipBuffer.length);
 		//write result of checksum back to buffer
-		System.arraycopy(ipchecksum, 0, buffer, 10, 2);
+		System.arraycopy(ipChecksum, 0, buffer, 10, 2);
 		
 		//zero out TCP header checksum first
-		int tcpstart = ipbuffer.length;
-		System.arraycopy(zero, 0, buffer,tcpstart + 16, 2);
-		byte[] tcpchecksum = PacketUtil.calculateTCPHeaderChecksum(buffer, tcpstart, tcpbuffer.length + datalength , 
-				ipheader.getDestinationIP(), ipheader.getSourceIP());
+		int tcpStart = ipBuffer.length;
+		byte[] tcpChecksum = PacketUtil.calculateTCPHeaderChecksum(buffer, tcpStart, tcpBuffer.length + dataLength ,
+				ipHeader.getDestinationIP(), ipHeader.getSourceIP());
 		
 		//write new checksum back to array
-		System.arraycopy(tcpchecksum, 0, buffer,tcpstart + 16, 2);
+		System.arraycopy(tcpChecksum, 0, buffer,tcpStart + 16, 2);
 
-		Message message = MainActivity.mHandler.obtainMessage(MainActivity.PACKET,
-				new Packet(ipheader, tcpheader, buffer));
+		Message message = MainActivity.mHandler.obtainMessage(MainActivity.PACKET, new Packet(ipHeader, tcpheader, buffer));
 		message.sendToTarget();
+
 		return buffer;
 	}
 	

@@ -14,11 +14,11 @@
  * limitations under the License.
 */
 
-package com.lipisoft.toyshark.ip;
+package com.lipisoft.toyshark.network.ip;
 
 import android.support.annotation.NonNull;
 
-import com.lipisoft.toyshark.tcp.PacketHeaderException;
+import com.lipisoft.toyshark.transport.tcp.PacketHeaderException;
 import com.lipisoft.toyshark.util.PacketUtil;
 
 import java.nio.ByteBuffer;

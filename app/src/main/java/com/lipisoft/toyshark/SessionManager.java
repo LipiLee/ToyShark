@@ -20,12 +20,12 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
-import com.lipisoft.toyshark.ip.IPv4Header;
+import com.lipisoft.toyshark.network.ip.IPv4Header;
 import com.lipisoft.toyshark.socket.DataConst;
 import com.lipisoft.toyshark.socket.SocketNIODataService;
 import com.lipisoft.toyshark.socket.SocketProtector;
-import com.lipisoft.toyshark.tcp.TCPHeader;
-import com.lipisoft.toyshark.udp.UDPHeader;
+import com.lipisoft.toyshark.transport.tcp.TCPHeader;
+import com.lipisoft.toyshark.transport.udp.UDPHeader;
 import com.lipisoft.toyshark.util.PacketUtil;
 
 import java.io.IOException;

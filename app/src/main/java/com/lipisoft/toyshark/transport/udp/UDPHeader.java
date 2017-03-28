@@ -14,7 +14,7 @@
  * limitations under the License.
 */
 
-package com.lipisoft.toyshark.udp;
+package com.lipisoft.toyshark.transport.udp;
 
 import com.lipisoft.toyshark.transport.ITransportHeader;
 

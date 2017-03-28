@@ -14,7 +14,7 @@
  * limitations under the License.
 */
 
-package com.lipisoft.toyshark.tcp;
+package com.lipisoft.toyshark.transport.tcp;
 /**
  * 
  * @author Borey Sao
