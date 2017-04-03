@@ -377,12 +377,16 @@ public class TCPPacketFactory {
 			System.arraycopy(data, 0, buffer, offset, dataLength);
 		}
 		//calculate checksum for both IP and TCP header
+		byte[] zero = {0, 0};
+		//zero out checksum first before calculation
+		System.arraycopy(zero, 0, buffer, 10, 2);
 		byte[] ipChecksum = PacketUtil.calculateChecksum(buffer, 0, ipBuffer.length);
 		//write result of checksum back to buffer
 		System.arraycopy(ipChecksum, 0, buffer, 10, 2);
 		
 		//zero out TCP header checksum first
 		int tcpStart = ipBuffer.length;
+		System.arraycopy(zero, 0, buffer, tcpStart + 16, 2);
 		byte[] tcpChecksum = PacketUtil.calculateTCPHeaderChecksum(buffer, tcpStart, tcpBuffer.length + dataLength ,
 				ipHeader.getDestinationIP(), ipHeader.getSourceIP());
 		
