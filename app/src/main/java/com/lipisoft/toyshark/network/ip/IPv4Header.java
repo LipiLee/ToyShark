@@ -204,9 +204,9 @@ public class IPv4Header {
 
 	public void setMayFragment(boolean mayFragment) {
 		this.mayFragment = mayFragment;
-		if(mayFragment){
+		if(mayFragment) {
 			this.flag |= 0x40;
-		}else{
+		} else {
 			this.flag &= 0xBF;
 		}
 	}

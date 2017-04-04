@@ -56,16 +56,14 @@ public class IPPacketFactory {
 		final byte[] buffer = new byte[header.getIPHeaderLength()];
 
 		buffer[0] = (byte)((header.getInternetHeaderLength() & 0xF) | 0x40);
-		buffer[1] = (byte) ((header.getDscpOrTypeOfService() << 2) &
-				(header.getEcn() & 0xFF));
+		buffer[1] = (byte) ((header.getDscpOrTypeOfService() << 2) & (header.getEcn() & 0xFF));
 		buffer[2] = (byte)(header.getTotalLength() >> 8);
 		buffer[3] = (byte)header.getTotalLength();
 		buffer[4] = (byte)(header.getIdentification() >> 8);
 		buffer[5] = (byte)header.getIdentification();
 
 		//combine flags and partial fragment offset
-		buffer[6] = (byte)(((header.getFragmentOffset() >> 8) & 0x1F) |
-				header.getFlag());
+		buffer[6] = (byte)(((header.getFragmentOffset() >> 8) & 0x1F) | header.getFlag());
 		buffer[7] = (byte)header.getFragmentOffset();
 		buffer[8] = header.getTimeToLive();
 		buffer[9]= header.getProtocol();
@@ -97,8 +95,7 @@ public class IPPacketFactory {
 	 * @return a new instance of IPv4Header
 	 * @throws PacketHeaderException
 	 */
-	public static IPv4Header createIPv4Header(@NonNull byte[] buffer, int start)
-			throws PacketHeaderException{
+	public static IPv4Header createIPv4Header(@NonNull byte[] buffer, int start) throws PacketHeaderException{
 		//avoid Index out of range
 		if( (buffer.length - start) < 20) {
 			throw new PacketHeaderException("Minimum IPv4 header is 20 bytes. There are less "

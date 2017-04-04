@@ -105,7 +105,7 @@ public class TCPPacketFactory {
 		return createPacketData(ip, tcp, null);
 	}
 
-	public static byte[] createFinData(IPv4Header ip, TCPHeader tcp, long ackNumber, long seqNumber, int timeSender, int timeReplyto){
+	public static byte[] createFinData(IPv4Header ip, TCPHeader tcp, long ackNumber, long seqNumber, int timeSender, int timeReplyTo){
 		//flip IP from source to dest and vice-versa
 		int sourceIp = ip.getDestinationIP();
 		int destIp = ip.getSourceIP();
@@ -115,7 +115,7 @@ public class TCPPacketFactory {
 		tcp.setAckNumber(ackNumber);
 		tcp.setSequenceNumber(seqNumber);
 		
-		tcp.setTimeStampReplyTo(timeReplyto);
+		tcp.setTimeStampReplyTo(timeReplyTo);
 		tcp.setTimeStampSender(timeSender);
 		
 		ip.setDestinationIP(destIp);

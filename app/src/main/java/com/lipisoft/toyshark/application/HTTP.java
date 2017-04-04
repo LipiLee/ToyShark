@@ -1,5 +1,7 @@
 package com.lipisoft.toyshark.application;
 
+import android.util.Pair;
+
 import java.util.List;
 
 /**
@@ -7,19 +9,19 @@ import java.util.List;
  */
 
 public class HTTP {
-    private List<String> httpHeaders;
-    private String body;
+    private List<Pair<String, String>> httpHeaders;
+    private byte[] body;
 
-    HTTP(List<String> httpHeaders, String body) {
+    HTTP(List<Pair<String, String>> httpHeaders, byte[] body) {
         this.httpHeaders = httpHeaders;
         this.body = body;
     }
 
-    public List<String> getHttpHeaders() {
+    public List<Pair<String, String>> getHttpHeaders() {
         return httpHeaders;
     }
 
-    public String getBody() {
+    public byte[] getBody() {
         return body;
     }
 }

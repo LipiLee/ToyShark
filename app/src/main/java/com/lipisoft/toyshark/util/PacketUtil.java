@@ -47,6 +47,7 @@ public class PacketUtil {
 
 	/**
 	 * convert int to byte array
+	 * https://docs.oracle.com/javase/tutorial/java/nutsandbolts/datatypes.html
 	 * @param value int value 32 bits
 	 * @param buffer array of byte to write to
 	 * @param offset position to write to
@@ -55,7 +56,7 @@ public class PacketUtil {
 		if(buffer.length - offset < 4){
 			return;
 		}
-		buffer[offset] = (byte)((value >> 24) & 0x000000FF);
+		buffer[offset] = (byte)((value >>> 24) & 0x000000FF);
 		buffer[offset + 1] = (byte)((value >> 16)&0x000000FF);
 		buffer[offset + 2] = (byte)((value >> 8)&0x000000FF);
 		buffer[offset + 3] = (byte)(value & 0x000000FF);
@@ -71,7 +72,7 @@ public class PacketUtil {
 		if(buffer.length - offset < 2){
 			return;
 		}
-		buffer[offset] = (byte)((value >> 8)&0x00FF);
+		buffer[offset] = (byte)((value >>> 8)& 0x00FF);
 		buffer[offset + 1] = (byte)(value & 0x00FF);
 	}
 
@@ -175,8 +176,8 @@ public class PacketUtil {
 	private static boolean isValidIPChecksum(byte[] data, int length){
 		int start = 0;
 		int sum = 0;
-		while(start < length){
-			sum += PacketUtil.getNetworkInt(data, start, 2);
+		while(start < length) {
+			sum += getNetworkInt(data, start, 2);
 			start = start + 2;
 		}
 
@@ -244,13 +245,10 @@ public class PacketUtil {
 
 	public static String intToIPAddress(int addressInt)
 	{
-		StringBuilder stringBuilder = new StringBuilder()
-				.append((addressInt >>> 24) & 0x000000FF).append(".")
-				.append((addressInt >>> 16) & 0x000000FF).append(".")
-				.append((addressInt >>> 8) & 0x000000FF).append(".")
-				.append(addressInt & 0x000000FF);
-
-		return stringBuilder.toString();
+		return String.valueOf((addressInt >>> 24) & 0x000000FF) + "." +
+				String.valueOf((addressInt >>> 16) & 0x000000FF) + "." +
+				String.valueOf((addressInt >>> 8) & 0x000000FF) + "." +
+				String.valueOf(addressInt & 0x000000FF);
 	}
 
 	/**
@@ -436,4 +434,4 @@ public class PacketUtil {
 
 		return str.toString();
 	}
-}//end class
+}
