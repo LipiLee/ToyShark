@@ -17,7 +17,9 @@
 package com.lipisoft.toyshark;
 
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
+import com.lipisoft.toyshark.application.IApplication;
 import com.lipisoft.toyshark.network.ip.IPv4Header;
 import com.lipisoft.toyshark.transport.ITransportHeader;
 
@@ -29,11 +31,14 @@ import com.lipisoft.toyshark.transport.ITransportHeader;
 public class Packet {
 	@NonNull private IPv4Header ipHeader;
 	@NonNull private ITransportHeader transportHeader;
+	@Nullable private IApplication application;
 	@NonNull private byte[] buffer;
 
+//	public Packet(IPv4Header ipHeader, ITransportHeader transportHeader, IApplication application, byte[] data) {
 	public Packet(IPv4Header ipHeader, ITransportHeader transportHeader, byte[] data) {
 		this.ipHeader = ipHeader;
 		this.transportHeader = transportHeader;
+		this.application = application;
 		buffer = data;
 	}
 
@@ -66,5 +71,10 @@ public class Packet {
 	@NonNull
 	public byte[] getBuffer() {
 		return buffer;
+	}
+
+	@Nullable
+	public IApplication getApplication() {
+		return application;
 	}
 }

@@ -214,13 +214,13 @@ public class TCPPacketFactory {
 
 	/**
 	 * Acknowledgment to client that server has received request.
-	 * @param ipheader IP Header
+	 * @param ipHeader IP Header
 	 * @param tcpheader TCP Header
 	 * @param ackToClient Acknowledge
 	 * @return byte[]
 	 */
-	public static byte[] createResponseAckData(IPv4Header ipheader, TCPHeader tcpheader, long ackToClient){
-		IPv4Header ip = IPPacketFactory.copyIPv4Header(ipheader);
+	public static byte[] createResponseAckData(IPv4Header ipHeader, TCPHeader tcpheader, long ackToClient){
+		IPv4Header ip = IPPacketFactory.copyIPv4Header(ipHeader);
 		TCPHeader tcp = copyTCPHeader(tcpheader);
 		
 		//flip IP from source to dest and vice-versa
@@ -264,47 +264,44 @@ public class TCPPacketFactory {
 	 * create packet data for sending back to client
 	 * @param ip IP Header
 	 * @param tcp TCP Header
-	 * @param packetdata Packet Data
+	 * @param packetData Packet Data
 	 * @return byte[]
 	 */
-	public static byte[] createResponsePacketData(IPv4Header ip, TCPHeader tcp, byte[] packetdata, boolean ispsh,
+	public static byte[] createResponsePacketData(IPv4Header ip, TCPHeader tcp, byte[] packetData, boolean isPsh,
 			long ackNumber, long seqNumber, int timeSender, int timeReplyto){
-		IPv4Header ipheader = IPPacketFactory.copyIPv4Header(ip);
-		TCPHeader tcpheader = copyTCPHeader(tcp);
+		IPv4Header ipHeader = IPPacketFactory.copyIPv4Header(ip);
+		TCPHeader tcpHeader = copyTCPHeader(tcp);
 		
 		//flip IP from source to dest and vice-versa
-		int sourceIp = ipheader.getDestinationIP();
-		int destIp = ipheader.getSourceIP();
-		int sourcePort = tcpheader.getDestinationPort();
-		int destPort = tcpheader.getSourcePort();
+		int sourceIp = ipHeader.getDestinationIP();
+		int sourcePort = tcpHeader.getDestinationPort();
+		ipHeader.setDestinationIP(ipHeader.getSourceIP());
+		ipHeader.setSourceIP(sourceIp);
+		tcpHeader.setDestinationPort(tcpHeader.getSourcePort());
+		tcpHeader.setSourcePort(sourcePort);
 		
+		tcpHeader.setAckNumber(ackNumber);
+		tcpHeader.setSequenceNumber(seqNumber);
 		
-		ipheader.setDestinationIP(destIp);
-		ipheader.setSourceIP(sourceIp);
-		tcpheader.setDestinationPort(destPort);
-		tcpheader.setSourcePort(sourcePort);
-		
-		tcpheader.setAckNumber(ackNumber);
-		tcpheader.setSequenceNumber(seqNumber);
-		
-		ipheader.setIdentification(PacketUtil.getPacketId());
+		ipHeader.setIdentification(PacketUtil.getPacketId());
 		
 		//ACK is always sent
-		tcpheader.setIsACK(true);
-		tcpheader.setIsSYN(false);
-		tcpheader.setIsPSH(ispsh);
-		tcpheader.setIsFIN(false);
+		tcpHeader.setIsACK(true);
+		tcpHeader.setIsSYN(false);
+		tcpHeader.setIsPSH(isPsh);
+		tcpHeader.setIsFIN(false);
 		
-		tcpheader.setTimeStampSender(timeSender);
-		tcpheader.setTimeStampReplyTo(timeReplyto);
+		tcpHeader.setTimeStampSender(timeSender);
+		tcpHeader.setTimeStampReplyTo(timeReplyto);
+
 		//recalculate IP length
-		int totalLength = ipheader.getIPHeaderLength() + tcpheader.getTCPHeaderLength();
-		if(packetdata != null){
-			totalLength += packetdata.length;
+		int totalLength = ipHeader.getIPHeaderLength() + tcpHeader.getTCPHeaderLength();
+		if(packetData != null){
+			totalLength += packetData.length;
 		}
-		ipheader.setTotalLength(totalLength);
+		ipHeader.setTotalLength(totalLength);
 		
-		return createPacketData(ipheader, tcpheader, packetdata);
+		return createPacketData(ipHeader, tcpHeader, packetData);
 	}
 
 	/**

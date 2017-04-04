@@ -8,7 +8,7 @@ import java.util.List;
  * Created by Lipi on 2017. 3. 28..
  */
 
-public class HTTP {
+public class HTTP implements IApplication {
     private List<Pair<String, String>> httpHeaders;
     private byte[] body;
 

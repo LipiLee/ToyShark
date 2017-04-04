@@ -14,6 +14,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.spi.AbstractSelectableChannel;
 import java.util.Date;
 
 public class SocketDataWriterWorker implements Runnable {
@@ -37,27 +38,36 @@ public class SocketDataWriterWorker implements Runnable {
 		}
 
 		session.setBusywrite(true);
-		if(session.getSocketChannel() != null){
+
+		AbstractSelectableChannel channel = session.getChannel();
+		if(channel instanceof SocketChannel){
 			writeTCP(session);
-		}else if(session.getUdpChannel() != null){
+		}else if(channel instanceof DatagramChannel){
 			writeUDP(session);
+		} else {
+			return;
 		}
 		session.setBusywrite(false);
 
 		if(session.isAbortingConnection()){
 			Log.d(TAG,"removing aborted connection -> " + sessionKey);
 			session.getSelectionkey().cancel();
-			if(session.getSocketChannel() != null &&
-					session.getSocketChannel().isConnected()){
+
+			if(channel instanceof SocketChannel) {
 				try {
-					session.getSocketChannel().close();
+					SocketChannel socketChannel = (SocketChannel) channel;
+					if (socketChannel.isConnected()) {
+						socketChannel.close();
+					}
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-			}else if(session.getUdpChannel() != null &&
-					session.getUdpChannel().isConnected()){
+			} else if(channel instanceof DatagramChannel) {
 				try {
-					session.getUdpChannel().close();
+					DatagramChannel datagramChannel = (DatagramChannel) channel;
+					if (datagramChannel.isConnected()) {
+						datagramChannel.close();
+					}
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -65,11 +75,12 @@ public class SocketDataWriterWorker implements Runnable {
 			sessionManager.closeSession(session);
 		}
 	}
+
 	private void writeUDP(Session session){
 		if(!session.hasDataToSend()){
 			return;
 		}
-		DatagramChannel channel = session.getUdpChannel();
+		DatagramChannel channel = (DatagramChannel) session.getChannel();
 		String name = PacketUtil.intToIPAddress(session.getDestAddress())+":"+session.getDestPort()+
 				"-"+PacketUtil.intToIPAddress(session.getSourceIp())+":"+session.getSourcePort();
 		byte[] data = session.getSendingData();
@@ -96,7 +107,7 @@ public class SocketDataWriterWorker implements Runnable {
 	}
 	
 	private void writeTCP(Session session){
-		SocketChannel channel = session.getSocketChannel();
+		SocketChannel channel = (SocketChannel) session.getChannel();
 
 		String name = PacketUtil.intToIPAddress(session.getDestAddress())+":"+session.getDestPort()+
 				"-"+PacketUtil.intToIPAddress(session.getSourceIp())+":"+session.getSourcePort();
@@ -107,13 +118,13 @@ public class SocketDataWriterWorker implements Runnable {
 		buffer.flip();
 		
 		try {
-			Log.d(TAG,"writing TCP data to: "+name);
+			Log.d(TAG,"writing TCP data to: " + name);
 			channel.write(buffer);
 			//Log.d(TAG,"finished writing data to: "+name);
-		}catch(NotYetConnectedException ex){
-			Log.e(TAG,"failed to write to unconnected socket: "+ex.getMessage());
+		} catch (NotYetConnectedException ex) {
+			Log.e(TAG,"failed to write to unconnected socket: " + ex.getMessage());
 		} catch (IOException e) {
-			Log.e(TAG,"Error writing to server: "+e.getMessage());
+			Log.e(TAG,"Error writing to server: " + e.getMessage());
 			
 			//close connection with vpn client
 			byte[] rstData = TCPPacketFactory.createRstData(

@@ -35,6 +35,7 @@ public class IPPacketFactory {
 	 * @param iPv4Header instance of IPv4Header
 	 * @return IPv4Header
 	 */
+	@NonNull
 	public static IPv4Header copyIPv4Header(@NonNull IPv4Header iPv4Header) {
 		return new IPv4Header(iPv4Header.getIpVersion(),
 				iPv4Header.getInternetHeaderLength(),

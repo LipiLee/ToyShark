@@ -38,7 +38,7 @@ public class SocketNIODataService implements Runnable {
 	private ThreadPoolExecutor workerPool;
 	
 	public SocketNIODataService(IClientPacketWriter iClientPacketWriter) {
-		final BlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<Runnable>();
+		final BlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<>();
 		workerPool = new ThreadPoolExecutor(8, 100, 10, TimeUnit.SECONDS, taskQueue);
 		writer = iClientPacketWriter;
 	}
@@ -52,14 +52,14 @@ public class SocketNIODataService implements Runnable {
 	}
 	/**
 	 * notify long running task to shutdown
-	 * @param isshutdown
+	 * @param shutdown to be shutdown or not
 	 */
-	public void setShutdown(boolean isshutdown){
-		this.shutdown = isshutdown;
+	public void setShutdown(boolean shutdown){
+		this.shutdown = shutdown;
 		this.sessionManager.getSelector().wakeup();
 	}
 
-	void runTask(){
+	private void runTask(){
 		Log.d(TAG, "Selector is running...");
 		
 		while(!shutdown){
@@ -76,13 +76,14 @@ public class SocketNIODataService implements Runnable {
 				}
 				continue;
 			}
+
 			if(shutdown){
 				break;
 			}
 			synchronized(syncSelector2){
-				Iterator<SelectionKey> iter = selector.selectedKeys().iterator();
-				while(iter.hasNext()){
-					SelectionKey key = iter.next();
+				Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();
+				while(iterator.hasNext()){
+					SelectionKey key = iterator.next();
 					SelectableChannel selectableChannel = key.channel();
 					if(selectableChannel instanceof SocketChannel) {
 						try {
@@ -93,7 +94,7 @@ public class SocketNIODataService implements Runnable {
 					} else if (selectableChannel instanceof DatagramChannel) {
 						processUDPSelectionKey(key);
 					}
-					iter.remove();
+					iterator.remove();
 					if(shutdown){
 						break;
 					}
@@ -102,65 +103,50 @@ public class SocketNIODataService implements Runnable {
 		}
 	}
 
-	void processUDPSelectionKey(SelectionKey key){
+	private void processUDPSelectionKey(SelectionKey key){
 		if(!key.isValid()){
 			Log.d(TAG,"Invalid SelectionKey for UDP");
 			return;
 		}
 		DatagramChannel channel = (DatagramChannel)key.channel();
-		Session sess = sessionManager.getSessionByDatagramChannel(channel);
-		if(sess == null){
+		Session session = sessionManager.getSessionByDatagramChannel(channel);
+		if(session == null){
 			return;
 		}
 		
-		if(!sess.isConnected() && key.isConnectable()){
-			String ips = PacketUtil.intToIPAddress(sess.getDestAddress());
-			int port = sess.getDestPort();
-			SocketAddress addr = new InetSocketAddress(ips,port);
+		if(!session.isConnected() && key.isConnectable()){
+			String ips = PacketUtil.intToIPAddress(session.getDestAddress());
+			int port = session.getDestPort();
+			SocketAddress address = new InetSocketAddress(ips,port);
 			try {
 				Log.d(TAG,"selector: connecting to remote UDP server: "+ips+":"+port);
-				try{
-					channel = channel.connect(addr);
-					sess.setUdpChannel(channel);
-					sess.setConnected(channel.isConnected());
-					
-				}catch(ClosedChannelException ex){
-					sess.setAbortingConnection(true);
-				}catch(UnresolvedAddressException ex2){
-					sess.setAbortingConnection(true);
-				}catch(UnsupportedAddressTypeException ex3){
-					sess.setAbortingConnection(true);
-				}catch(SecurityException ex4){
-					sess.setAbortingConnection(true);
-				}
-				
-			}catch(ClosedChannelException ex1){
-				Log.e(TAG,"failed to connect to closed udp: "+ex1.getMessage());
-				sess.setAbortingConnection(true);
-			} catch (IOException e) {
-				Log.e(TAG,"failed to connect to udp: "+e.getMessage());
+				channel = channel.connect(address);
+				session.setChannel(channel);
+				session.setConnected(channel.isConnected());
+			}catch (Exception e) {
 				e.printStackTrace();
-				sess.setAbortingConnection(true);
+				session.setAbortingConnection(true);
 			}
 		}
 		if(channel.isConnected()){
-			processSelector(key, sess);
+			processSelector(key, session);
 		}
 	}
-	void processTCPSelectionKey(SelectionKey key) throws IOException{
+
+	private void processTCPSelectionKey(SelectionKey key) throws IOException{
 		if(!key.isValid()){
 			Log.d(TAG,"Invalid SelectionKey for TCP");
 			return;
 		}
 		SocketChannel channel = (SocketChannel)key.channel();
-		Session sess = sessionManager.getSessionByChannel(channel);
-		if(sess == null){
+		Session session = sessionManager.getSessionByChannel(channel);
+		if(session == null){
 			return;
 		}
 		
-		if(!sess.isConnected() && key.isConnectable()){
-			String ips = PacketUtil.intToIPAddress(sess.getDestAddress());
-			int port = sess.getDestPort();
+		if(!session.isConnected() && key.isConnectable()){
+			String ips = PacketUtil.intToIPAddress(session.getDestAddress());
+			int port = session.getDestPort();
 			SocketAddress addr = new InetSocketAddress(ips,port);
 			Log.d(TAG,"connecting to remote tcp server: "+ips+":"+port);
 			boolean connected = false;
@@ -168,31 +154,31 @@ public class SocketNIODataService implements Runnable {
 				try{
 					connected = channel.connect(addr);
 				}catch(ClosedChannelException ex){
-					sess.setAbortingConnection(true);
+					session.setAbortingConnection(true);
 				}catch(UnresolvedAddressException ex2){
-					sess.setAbortingConnection(true);
+					session.setAbortingConnection(true);
 				}catch(UnsupportedAddressTypeException ex3){
-					sess.setAbortingConnection(true);
+					session.setAbortingConnection(true);
 				}catch(SecurityException ex4){
-					sess.setAbortingConnection(true);
+					session.setAbortingConnection(true);
 				}catch(IOException ex5){
-					sess.setAbortingConnection(true);
+					session.setAbortingConnection(true);
 				}
 			}
 			
 			if(connected){
-				sess.setConnected(connected);
+				session.setConnected(connected);
 				Log.d(TAG,"connected immediately to remote tcp server: "+ips+":"+port);
 			}else{
 				if(channel.isConnectionPending()){
 					connected = channel.finishConnect();
-					sess.setConnected(connected);
+					session.setConnected(connected);
 					Log.d(TAG,"connected to remote tcp server: "+ips+":"+port);
 				}
 			}
 		}
 		if(channel.isConnected()){
-			processSelector(key, sess);
+			processSelector(key, session);
 		}
 	}
 

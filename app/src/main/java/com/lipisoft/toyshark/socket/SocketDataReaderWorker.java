@@ -22,6 +22,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.spi.AbstractSelectableChannel;
 import java.util.Date;
 
 /**
@@ -50,28 +51,35 @@ class SocketDataReaderWorker implements Runnable {
 			Log.e(TAG, "Session NOT FOUND");
 			return;
 		}
-		if(session.getSocketChannel() != null) {
-			try{
-				readTCP(session);
-			} catch(Exception ex){
-				Log.e(TAG, "error processRead: "+ ex.getMessage());
-			}
-		} else if(session.getUdpChannel() != null){
+
+		AbstractSelectableChannel channel = session.getChannel();
+
+		if(channel instanceof SocketChannel) {
+			readTCP(session);
+		} else if(channel instanceof DatagramChannel){
 			readUDP(session);
+		} else {
+			return;
 		}
-			
+
 		if(session.isAbortingConnection()) {
 			Log.d(TAG,"removing aborted connection -> "+ sessionKey);
 			session.getSelectionkey().cancel();
-			if(session.getSocketChannel() != null && session.getSocketChannel().isConnected()){
+			if(channel instanceof SocketChannel){
 				try {
-					session.getSocketChannel().close();
+					SocketChannel socketChannel = (SocketChannel) channel;
+					if (socketChannel.isConnected()) {
+						socketChannel.close();
+					}
 				} catch (IOException e) {
 					Log.e(TAG, e.toString());
 				}
-			}else if(session.getUdpChannel() != null && session.getUdpChannel().isConnected()){
+			}else if(channel instanceof DatagramChannel){
 				try {
-					session.getUdpChannel().close();
+					DatagramChannel datagramChannel = (DatagramChannel) channel;
+					if (datagramChannel.isConnected()) {
+						datagramChannel.close();
+					}
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -80,7 +88,6 @@ class SocketDataReaderWorker implements Runnable {
 		} else {
 			session.setBusyread(false);
 		}
-
 	}
 	
 	private void readTCP(@NonNull Session session) {
@@ -88,7 +95,7 @@ class SocketDataReaderWorker implements Runnable {
 			return;
 		}
 
-		SocketChannel channel = session.getSocketChannel();
+		SocketChannel channel = (SocketChannel) session.getChannel();
 		ByteBuffer buffer = ByteBuffer.allocate(DataConst.MAX_RECEIVE_BUFFER_SIZE);
 		int len;
 
@@ -98,7 +105,7 @@ class SocketDataReaderWorker implements Runnable {
 					len = channel.read(buffer);
 					if(len > 0) { //-1 mean it reach the end of stream
 						//Log.d(TAG,"SocketDataService received "+len+" from remote server: "+name);
-						sendToRequester(buffer, channel, len, session);
+						sendToRequester(buffer, len, session);
 						buffer.clear();
 					} else if(len == -1) {
 						Log.d(TAG,"End of data from remote server, will send FIN to client");
@@ -125,13 +132,7 @@ class SocketDataReaderWorker implements Runnable {
 		}
 	}
 	
-	private void sendToRequester(ByteBuffer buffer, SocketChannel channel, int dataSize, Session session){
-		
-		if(session == null){
-			Log.e(TAG,"Session not found for destination server: " + channel.socket().getInetAddress().getHostAddress());
-			return;
-		}
-		
+	private void sendToRequester(ByteBuffer buffer, int dataSize, @NonNull Session session){
 		//last piece of data is usually smaller than MAX_RECEIVE_BUFFER_SIZE
 		if(dataSize < DataConst.MAX_RECEIVE_BUFFER_SIZE)
 			session.setHasReceivedLastSegment(true);
@@ -140,6 +141,7 @@ class SocketDataReaderWorker implements Runnable {
 
 		buffer.limit(dataSize);
 		buffer.flip();
+		// TODO should allocate new byte array?
 		byte[] data = new byte[dataSize];
 		System.arraycopy(buffer.array(), 0, data, 0, dataSize);
 		session.addReceivedData(data);
@@ -154,7 +156,7 @@ class SocketDataReaderWorker implements Runnable {
 	 * @param session Session
 	 * @return boolean
 	 */
-	private boolean pushDataToClient(Session session){
+	private boolean pushDataToClient(@NonNull Session session){
 		if(!session.hasReceivedData()){
 			//no data to send
 			Log.d(TAG,"no data for vpn client");
@@ -163,6 +165,7 @@ class SocketDataReaderWorker implements Runnable {
 		
 		IPv4Header ipHeader = session.getLastIpHeader();
 		TCPHeader tcpheader = session.getLastTcpHeader();
+		// TODO What does 60 mean?
 		int max = session.getMaxSegmentSize() - 60;
 		
 		if(max < 1){
@@ -264,7 +267,7 @@ class SocketDataReaderWorker implements Runnable {
 		}
 	}
 	private void readUDP(Session session){
-		DatagramChannel channel = session.getUdpChannel();
+		DatagramChannel channel = (DatagramChannel) session.getChannel();
 		ByteBuffer buffer = ByteBuffer.allocate(DataConst.MAX_RECEIVE_BUFFER_SIZE);
 		int len;
 

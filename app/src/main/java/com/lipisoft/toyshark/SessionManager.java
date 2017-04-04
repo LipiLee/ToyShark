@@ -37,6 +37,7 @@ import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.spi.AbstractSelectableChannel;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -82,7 +83,7 @@ public class SessionManager {
 	 * keep java garbage collector from collecting a session
 	 * @param session Session
 	 */
-	void keepSessionAlive(Session session){
+	void keepSessionAlive(Session session) {
 		if(session != null){
 			String key = createKey(session.getDestAddress(), session.getDestPort(),
 					session.getSourceIp(), session.getSourcePort());
@@ -152,8 +153,13 @@ public class SessionManager {
 		Collection<Session> sessions = table.values();
 
 		for (Session session: sessions) {
-			if(session.getUdpChannel() == channel)
-				return session;
+			AbstractSelectableChannel abstractSelectableChannel = session.getChannel();
+			if (abstractSelectableChannel instanceof DatagramChannel) {
+				DatagramChannel datagramChannel = (DatagramChannel) abstractSelectableChannel;
+				if (datagramChannel == channel) {
+					return session;
+				}
+			}
 		}
 
 		return null;
@@ -163,8 +169,12 @@ public class SessionManager {
 		Collection<Session> sessions = table.values();
 
 		for (Session session: sessions) {
-			if(session.getSocketChannel() == channel) {
-				return session;
+			AbstractSelectableChannel abstractSelectableChannel = session.getChannel();
+			if (abstractSelectableChannel instanceof SocketChannel) {
+				SocketChannel socketChannel = (SocketChannel) abstractSelectableChannel;
+				if (socketChannel == channel) {
+					return session;
+				}
 			}
 		}
 
@@ -194,11 +204,13 @@ public class SessionManager {
 	void closeSession(int ip, int port, int srcIp, int srcPort){
 		String key = createKey(ip, port, srcIp, srcPort);
 		Session session = table.remove(key);
+
 		if(session != null){
+			final AbstractSelectableChannel channel = session.getChannel();
 			try {
-				SocketChannel chan = session.getSocketChannel();
-				if(chan != null)
-					chan.close();
+				if (channel != null) {
+					channel.close();
+				}
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -213,9 +225,10 @@ public class SessionManager {
 		table.remove(key);
 
 		try {
-			SocketChannel socketChannel = session.getSocketChannel();
-			if(socketChannel != null)
-				socketChannel.close();
+			AbstractSelectableChannel channel = session.getChannel();
+			if(channel != null) {
+				channel.close();
+			}
 		} catch (IOException e) {
 			Log.e(TAG, e.toString());
 		}
@@ -230,16 +243,13 @@ public class SessionManager {
 
 		Session session = new Session(srcIp, srcPort, ip, port);
 
-		DatagramChannel channel;
+		DatagramChannel channel = null;
 
 		try {
 			channel = DatagramChannel.open();
 			channel.socket().setSoTimeout(0);
 			channel.configureBlocking(false);
 
-		} catch(SocketException e) {
-			e.printStackTrace();
-			return null;
 		} catch (IOException e) {
 			e.printStackTrace();
 			return null;
@@ -267,12 +277,10 @@ public class SessionManager {
 				synchronized(SocketNIODataService.syncSelector) {
 					SelectionKey selectionKey;
 					if (channel.isConnected()) {
-						selectionKey = channel.register(selector,
-								SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+						selectionKey = channel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
 					} else {
-						selectionKey = channel.register(selector,
-								SelectionKey.OP_CONNECT | SelectionKey.OP_READ |
-										SelectionKey.OP_WRITE);
+						selectionKey = channel.register(selector, SelectionKey.OP_CONNECT | SelectionKey.OP_READ |
+								SelectionKey.OP_WRITE);
 					}
 					session.setSelectionkey(selectionKey);
 					Log.d(TAG,"Registered udp selector successfully");
@@ -284,7 +292,7 @@ public class SessionManager {
 			return null;
 		}
 
-		session.setUdpChannel(channel);
+		session.setChannel(channel);
 
 		if (table.containsKey(keys)) {
 			try {
@@ -362,7 +370,7 @@ public class SessionManager {
 			return null;
 		}
 
-		session.setSocketChannel(channel);
+		session.setChannel(channel);
 
 		if (table.containsKey(key)) {
 			try {
@@ -385,7 +393,7 @@ public class SessionManager {
 	 * @return String
 	 */
 	public static String createKey(int ip, int port, int srcIp, int srcPort){
-		return PacketUtil.intToIPAddress(srcIp) + ":" + srcPort + "=" +
+		return PacketUtil.intToIPAddress(srcIp) + ":" + srcPort + "-" +
 				PacketUtil.intToIPAddress(ip) + ":" + port;
 	}
 }

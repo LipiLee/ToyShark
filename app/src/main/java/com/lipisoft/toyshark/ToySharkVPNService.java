@@ -51,10 +51,10 @@ public class ToySharkVPNService extends VpnService implements Handler.Callback,
 	private Thread mThread;
 	private ParcelFileDescriptor mInterface;
 	private boolean serviceValid;
-	private SocketNIODataService dataservice;
+	private SocketNIODataService dataService;
 	private Thread dataServiceThread;
 	private SocketDataPublisher packetbgWriter;
-	private Thread packetqueueThread;
+	private Thread packetQueueThread;
 	private File traceDir;
 	private PCapFileWriter pcapOutput;
 	private FileOutputStream timeStream;
@@ -63,14 +63,18 @@ public class ToySharkVPNService extends VpnService implements Handler.Callback,
 	public int onStartCommand(Intent intent, int flags, int startId) {
 
 		Log.d(TAG, "onStartCommand");
-		loadExtras(intent);
+		if (intent != null) {
+			loadExtras(intent);
+		} else {
+			return START_STICKY;
+		}
 
 		try {
 			initTraceFiles();
 		} catch (IOException e) {
 			e.printStackTrace();
 			stopSelf();
-			return START_STICKY_COMPATIBILITY;
+			return START_STICKY;
 		}
 
 		// The handler is only used to show messages.
@@ -93,13 +97,12 @@ public class ToySharkVPNService extends VpnService implements Handler.Callback,
 		}
 
 		// Start a new session by creating a new thread.
-		mThread = new Thread(this, "CaptureVpnThread");
+		mThread = new Thread(this, "CaptureThread");
 		mThread.start();
 		return START_STICKY;
 	}
 
 	private void loadExtras(Intent intent) {
-		Log.i(TAG, "loadExtras");
 		String traceDirStr = intent.getStringExtra("TRACE_DIR");
 		traceDir = new File(traceDirStr);
 	}
@@ -202,8 +205,8 @@ public class ToySharkVPNService extends VpnService implements Handler.Callback,
 
 		unregisterAnalyzerCloseCmdReceiver();
 
-		if (dataservice !=  null)
-			dataservice.setShutdown(true);
+		if (dataService !=  null)
+			dataService.setShutdown(true);
 
 		if (packetbgWriter != null)
 			packetbgWriter.setShuttingDown(true);
@@ -213,8 +216,8 @@ public class ToySharkVPNService extends VpnService implements Handler.Callback,
 		if(dataServiceThread != null){
 			dataServiceThread.interrupt();
 		}
-		if(packetqueueThread != null){
-			packetqueueThread.interrupt();
+		if(packetQueueThread != null){
+			packetQueueThread.interrupt();
 		}
 
 		try {
@@ -255,12 +258,8 @@ public class ToySharkVPNService extends VpnService implements Handler.Callback,
 
 		try {
 			if (startVpnService()) {
-				try {
-					startCapture();
-					Log.i(TAG, "Capture completed");
-				} catch (IOException e) {
-					Log.e(TAG,e.getMessage());
-				}
+				startCapture();
+				Log.i(TAG, "Capture completed");
 			} else {
 				Log.e(TAG,"Failed to start VPN Service!");
 			}
@@ -279,7 +278,7 @@ public class ToySharkVPNService extends VpnService implements Handler.Callback,
 	 */
 	private void initTraceFiles() throws IOException{
 		Log.i(TAG, "initTraceFiles()");
-		instanciatePcapFile();
+		intializePcapFile();
 		instanciateTimeFile();
 	}
 
@@ -296,13 +295,13 @@ public class ToySharkVPNService extends VpnService implements Handler.Callback,
 	 * Create and leave open, the pcap file
 	 * @throws IOException
 	 */
-	private void instanciatePcapFile() throws IOException {
+	private void intializePcapFile() throws IOException {
 		if (!traceDir.exists())
 			if (!traceDir.mkdirs())
 				Log.e(TAG, "CANNOT make " + traceDir.toString());
 
 		// gen & open pcap file
-		String sFileName = "traffic.pcap";
+		String sFileName = "ToyShark.pcapng";
 		File pcapFile = new File(traceDir, sFileName);
 		pcapOutput = new PCapFileWriter(pcapFile);
 	}
@@ -376,15 +375,6 @@ public class ToySharkVPNService extends VpnService implements Handler.Callback,
 				.addAddress("10.120.0.1", 32)
 				.addRoute("0.0.0.0", 0)
 				.setSession("ToyShark");
-		if (mInterface != null) {
-			try {
-				mInterface.close();
-			} catch (Exception e) {
-				Log.e(TAG, "Exception when closing mInterface:" + e.getMessage());
-			}
-		}
-
-		Log.i(TAG, "startVpnService => builder.establish()");
 		mInterface = builder.establish();
 
 		if(mInterface != null){
@@ -405,28 +395,28 @@ public class ToySharkVPNService extends VpnService implements Handler.Callback,
 		Log.i(TAG, "startCapture() :capture starting");
 
 		// Packets to be sent are queued in this input stream.
-		FileInputStream clientreader = new FileInputStream(mInterface.getFileDescriptor());
+		FileInputStream clientReader = new FileInputStream(mInterface.getFileDescriptor());
 
 		// Packets received need to be written to this output stream.
-		FileOutputStream clientwriter = new FileOutputStream(mInterface.getFileDescriptor());
+		FileOutputStream clientWriter = new FileOutputStream(mInterface.getFileDescriptor());
 
 		// Allocate the buffer for a single packet.
 		ByteBuffer packet = ByteBuffer.allocate(4092);
-		IClientPacketWriter clientpacketwriter = new ClientPacketWriterImpl(clientwriter);
+		IClientPacketWriter clientPacketWriter = new ClientPacketWriterImpl(clientWriter);
 
 		SessionHandler handler = SessionHandler.getInstance();
-		handler.setWriter(clientpacketwriter);
+		handler.setWriter(clientPacketWriter);
 
 		//background task for non-blocking socket
-		dataservice = new SocketNIODataService(clientpacketwriter);
-		dataServiceThread = new Thread(dataservice);
+		dataService = new SocketNIODataService(clientPacketWriter);
+		dataServiceThread = new Thread(dataService);
 		dataServiceThread.start();
 
 		//background task for writing packet data to pcap file
 		packetbgWriter = new SocketDataPublisher();
 		packetbgWriter.subscribe(this);
-		packetqueueThread = new Thread(packetbgWriter);
-		packetqueueThread.start();
+		packetQueueThread = new Thread(packetbgWriter);
+		packetQueueThread.start();
 
 		byte[] data;
 		int length;
@@ -434,7 +424,7 @@ public class ToySharkVPNService extends VpnService implements Handler.Callback,
 		while (serviceValid) {
 			//read packet from vpn client
 			data = packet.array();
-			length = clientreader.read(data);
+			length = clientReader.read(data);
 			if(length > 0){
 				//Log.d(TAG, "received packet from vpn client: "+length);
 				try {

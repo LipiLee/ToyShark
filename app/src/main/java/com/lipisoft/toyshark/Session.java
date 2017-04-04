@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.spi.AbstractSelectableChannel;
 
 import com.lipisoft.toyshark.network.ip.IPv4Header;
 import com.lipisoft.toyshark.transport.tcp.TCPHeader;
@@ -36,20 +37,10 @@ import com.lipisoft.toyshark.transport.udp.UDPHeader;
  */
 public class Session {
 	private static  final String TAG = "Session";
-	//help synchronize receivingStream
-	private final Object syncReceive = new Object();
-	
-	//for synchronizing sendingStream
-	private final Object syncSend = new Object();
-	//for increasing and decreasing sendAmountSinceLastAck
-	private final Object syncSendAmount = new Object();
-	
-	//for setting TCP/UDP header
-	private final Object syncLastHeader = new Object();
-	
-	private SocketChannel socketchannel;
-	
-	private DatagramChannel udpChannel;
+
+//	private SocketChannel socketchannel;
+//	private DatagramChannel udpChannel;
+	private AbstractSelectableChannel channel;
 	
 	private int destAddress = 0;
 	private int destPort = 0;
@@ -135,7 +126,7 @@ public class Session {
 		this.destPort = destnationPort;
 	}
 
-	/**
+	/*
 	 * track how many byte sent to client since last ACK to avoid overloading
 	 * @param amount Amount
 	 */
@@ -222,14 +213,12 @@ public class Session {
 	 * @param data Data to be sent
 	 * @return boolean Success or not
 	 */
-	boolean setSendingData(byte[] data){
-		synchronized(syncSend){
-			try {
-				sendingStream.write(data);
-			} catch (IOException e) {
-				Log.e(TAG, e.toString());
-                return false;
-			}
+	synchronized boolean setSendingData(byte[] data){
+		try {
+			sendingStream.write(data);
+		} catch (IOException e) {
+			Log.e(TAG, e.toString());
+			return false;
 		}
 		return true;
 	}
@@ -242,12 +231,9 @@ public class Session {
 	 * dequeue data for sending to server
 	 * @return byte[]
 	 */
-	public byte[] getSendingData(){
-		byte[] data;
-		synchronized(syncSend){
-			data = sendingStream.toByteArray();
-			sendingStream.reset();
-		}
+	public synchronized byte[] getSendingData(){
+		byte[] data = sendingStream.toByteArray();
+		sendingStream.reset();
 		return data;
 	}
 	/**
@@ -348,56 +334,53 @@ public class Session {
 		this.recSequence = recSequence;
 	}
 
-	public SocketChannel getSocketChannel() {
-		return socketchannel;
+//	public SocketChannel getSocketChannel() {
+//		return socketchannel;
+//	}
+
+//	void setSocketChannel(SocketChannel socketchannel) {
+//		this.socketchannel = socketchannel;
+//	}
+	
+//	public DatagramChannel getUdpChannel() {
+//		return udpChannel;
+//	}
+//	public void setUdpChannel(DatagramChannel udpChannel) {
+//		this.udpChannel = udpChannel;
+//	}
+
+	public AbstractSelectableChannel getChannel() {
+		return channel;
 	}
 
-	void setSocketChannel(SocketChannel socketchannel) {
-		this.socketchannel = socketchannel;
+	public void setChannel(AbstractSelectableChannel channel) {
+		this.channel = channel;
 	}
-	
-	public DatagramChannel getUdpChannel() {
-		return udpChannel;
-	}
-	public void setUdpChannel(DatagramChannel udpChannel) {
-		this.udpChannel = udpChannel;
-	}
+
 	public boolean hasReceivedLastSegment() {
 		return hasReceivedLastSegment;
 	}
 	public void setHasReceivedLastSegment(boolean hasReceivedLastSegment) {
 		this.hasReceivedLastSegment = hasReceivedLastSegment;
 	}
-	public IPv4Header getLastIpHeader() {
-		synchronized(syncLastHeader){
-			return lastIpHeader;
-		}
+	public synchronized IPv4Header getLastIpHeader() {
+		return lastIpHeader;
 	}
-	void setLastIpHeader(IPv4Header lastIpHeader) {
-		synchronized(syncLastHeader){
-			this.lastIpHeader = lastIpHeader;
-		}
+	synchronized void setLastIpHeader(IPv4Header lastIpHeader) {
+		this.lastIpHeader = lastIpHeader;
 	}
-	public TCPHeader getLastTcpHeader() {
-		synchronized(syncLastHeader){
-			return lastTcpHeader;
-		}
+	public synchronized TCPHeader getLastTcpHeader() {
+		return lastTcpHeader;
 	}
-	void setLastTcpHeader(TCPHeader lastTcpHeader) {
-		synchronized(syncLastHeader){
-			this.lastTcpHeader = lastTcpHeader;
-		}
+	synchronized void setLastTcpHeader(TCPHeader lastTcpHeader) {
+		this.lastTcpHeader = lastTcpHeader;
 	}
 	
-	public UDPHeader getLastUdpHeader() {
-		synchronized(syncLastHeader){
-			return lastUdpHeader;
-		}
+	public synchronized UDPHeader getLastUdpHeader() {
+		return lastUdpHeader;
 	}
-	void setLastUdpHeader(UDPHeader lastUdpHeader) {
-		synchronized(syncLastHeader){
-			this.lastUdpHeader = lastUdpHeader;
-		}
+	synchronized void setLastUdpHeader(UDPHeader lastUdpHeader) {
+		this.lastUdpHeader = lastUdpHeader;
 	}
 	boolean isClosingConnection() {
 		return closingConnection;
