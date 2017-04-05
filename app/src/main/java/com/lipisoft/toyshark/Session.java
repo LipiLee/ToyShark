@@ -18,16 +18,14 @@ package com.lipisoft.toyshark;
 
 import android.util.Log;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.channels.DatagramChannel;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.SocketChannel;
-import java.nio.channels.spi.AbstractSelectableChannel;
-
 import com.lipisoft.toyshark.network.ip.IPv4Header;
 import com.lipisoft.toyshark.transport.tcp.TCPHeader;
 import com.lipisoft.toyshark.transport.udp.UDPHeader;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.spi.AbstractSelectableChannel;
 
 /**
  * store information about a socket connection from a VPN client.
@@ -38,11 +36,9 @@ import com.lipisoft.toyshark.transport.udp.UDPHeader;
 public class Session {
 	private static  final String TAG = "Session";
 
-//	private SocketChannel socketchannel;
-//	private DatagramChannel udpChannel;
 	private AbstractSelectableChannel channel;
 	
-	private int destAddress = 0;
+	private int destIp = 0;
 	private int destPort = 0;
 	
 	private int sourceIp = 0;
@@ -107,8 +103,8 @@ public class Session {
 //	private long ackedToFinTime = 0;
 	
 	//indicate that this session is currently being worked on by some SocketDataWorker already
-	private volatile boolean isbusyread = false;
-	private volatile boolean isbusywrite = false;
+	private volatile boolean isBusyRead = false;
+	private volatile boolean isBusyWrite = false;
 	
 	//closing session and aborting connection, will be done by background task
 	private volatile boolean abortingConnection = false;
@@ -117,13 +113,13 @@ public class Session {
 	
 	public long connectionStartTime = 0;
 	
-	Session(int sourceIp, int sourcePort, int destinationIp, int destnationPort){
+	Session(int sourceIp, int sourcePort, int destinationIp, int destinationPort){
 		receivingStream = new ByteArrayOutputStream();
 		sendingStream = new ByteArrayOutputStream();
 		this.sourceIp = sourceIp;
 		this.sourcePort = sourcePort;
-		this.destAddress = destinationIp;
-		this.destPort = destnationPort;
+		this.destIp = destinationIp;
+		this.destPort = destinationPort;
 	}
 
 	/*
@@ -244,8 +240,8 @@ public class Session {
 		return sendingStream.size() > 0;
 	}
 
-	public int getDestAddress() {
-		return destAddress;
+	public int getDestIp() {
+		return destIp;
 	}
 
 	public int getDestPort() {
@@ -438,17 +434,17 @@ public class Session {
 //		this.ackedToFinTime = ackedToFinTime;
 //	}
 	
-	public boolean isBusyread() {
-		return isbusyread;
+	public boolean isBusyRead() {
+		return isBusyRead;
 	}
 	public void setBusyread(boolean isbusyread) {
-		this.isbusyread = isbusyread;
+		this.isBusyRead = isbusyread;
 	}
 	public boolean isBusywrite() {
-		return isbusywrite;
+		return isBusyWrite;
 	}
 	public void setBusywrite(boolean isbusywrite) {
-		this.isbusywrite = isbusywrite;
+		this.isBusyWrite = isbusywrite;
 	}
 	public boolean isAbortingConnection() {
 		return abortingConnection;
@@ -456,10 +452,10 @@ public class Session {
 	public void setAbortingConnection(boolean abortingConnection) {
 		this.abortingConnection = abortingConnection;
 	}
-	public SelectionKey getSelectionkey() {
+	public SelectionKey getSelectionKey() {
 		return selectionkey;
 	}
-	void setSelectionkey(SelectionKey selectionkey) {
+	void setSelectionKey(SelectionKey selectionkey) {
 		this.selectionkey = selectionkey;
 	}
 }

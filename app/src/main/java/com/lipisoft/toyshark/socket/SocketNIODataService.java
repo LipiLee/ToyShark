@@ -115,7 +115,7 @@ public class SocketNIODataService implements Runnable {
 		}
 		
 		if(!session.isConnected() && key.isConnectable()){
-			String ips = PacketUtil.intToIPAddress(session.getDestAddress());
+			String ips = PacketUtil.intToIPAddress(session.getDestIp());
 			int port = session.getDestPort();
 			SocketAddress address = new InetSocketAddress(ips,port);
 			try {
@@ -145,14 +145,14 @@ public class SocketNIODataService implements Runnable {
 		}
 		
 		if(!session.isConnected() && key.isConnectable()){
-			String ips = PacketUtil.intToIPAddress(session.getDestAddress());
+			String ips = PacketUtil.intToIPAddress(session.getDestIp());
 			int port = session.getDestPort();
-			SocketAddress addr = new InetSocketAddress(ips,port);
-			Log.d(TAG,"connecting to remote tcp server: "+ips+":"+port);
+			SocketAddress address = new InetSocketAddress(ips, port);
+			Log.d(TAG,"connecting to remote tcp server: " + ips + ":" + port);
 			boolean connected = false;
 			if(!channel.isConnected() && !channel.isConnectionPending()){
 				try{
-					connected = channel.connect(addr);
+					connected = channel.connect(address);
 				}catch(ClosedChannelException ex){
 					session.setAbortingConnection(true);
 				}catch(UnresolvedAddressException ex2){
@@ -166,10 +166,10 @@ public class SocketNIODataService implements Runnable {
 				}
 			}
 			
-			if(connected){
+			if (connected) {
 				session.setConnected(connected);
 				Log.d(TAG,"connected immediately to remote tcp server: "+ips+":"+port);
-			}else{
+			} else {
 				if(channel.isConnectionPending()){
 					connected = channel.finishConnect();
 					session.setConnected(connected);
@@ -183,7 +183,7 @@ public class SocketNIODataService implements Runnable {
 	}
 
 	private void processSelector(SelectionKey selectionKey, Session session){
-		String sessionKey = sessionManager.createKey(session.getDestAddress(),
+		String sessionKey = sessionManager.createKey(session.getDestIp(),
 				session.getDestPort(), session.getSourceIp(),
 				session.getSourcePort());
 		//tcp has PSH flag when data is ready for sending, UDP does not have this
@@ -197,7 +197,7 @@ public class SocketNIODataService implements Runnable {
 			workerPool.execute(worker);
 		}
 		if(selectionKey.isValid() && selectionKey.isReadable()
-				&& !session.isBusyread())
+				&& !session.isBusyRead())
 		{
 			session.setBusyread(true);
 			final SocketDataReaderWorker worker =

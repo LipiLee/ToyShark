@@ -51,7 +51,7 @@ public class SocketDataWriterWorker implements Runnable {
 
 		if(session.isAbortingConnection()){
 			Log.d(TAG,"removing aborted connection -> " + sessionKey);
-			session.getSelectionkey().cancel();
+			session.getSelectionKey().cancel();
 
 			if(channel instanceof SocketChannel) {
 				try {
@@ -81,7 +81,7 @@ public class SocketDataWriterWorker implements Runnable {
 			return;
 		}
 		DatagramChannel channel = (DatagramChannel) session.getChannel();
-		String name = PacketUtil.intToIPAddress(session.getDestAddress())+":"+session.getDestPort()+
+		String name = PacketUtil.intToIPAddress(session.getDestIp())+":"+session.getDestPort()+
 				"-"+PacketUtil.intToIPAddress(session.getSourceIp())+":"+session.getSourcePort();
 		byte[] data = session.getSendingData();
 		ByteBuffer buffer = ByteBuffer.allocate(data.length);
@@ -109,7 +109,7 @@ public class SocketDataWriterWorker implements Runnable {
 	private void writeTCP(Session session){
 		SocketChannel channel = (SocketChannel) session.getChannel();
 
-		String name = PacketUtil.intToIPAddress(session.getDestAddress())+":"+session.getDestPort()+
+		String name = PacketUtil.intToIPAddress(session.getDestIp())+":"+session.getDestPort()+
 				"-"+PacketUtil.intToIPAddress(session.getSourceIp())+":"+session.getSourcePort();
 		
 		byte[] data = session.getSendingData();

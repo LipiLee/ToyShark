@@ -219,7 +219,7 @@ class SessionHandler {
 		}
 	}
 	private void ackFinAck(IPv4Header ip, TCPHeader tcp, Session session){
-		//TODO: check if client only sent FIN without ACK
+		//TODO: check if client send only FIN without ACK
 		long ack = tcp.getSequenceNumber() + 1;
 		long seq = tcp.getAckNumber();
 		byte[] data = TCPPacketFactory.createFinAckData(ip, tcp, ack, seq, true, true);
@@ -227,7 +227,7 @@ class SessionHandler {
 			writer.write(data);
 			packetData.addData(data);
 			if(session != null){
-				session.getSelectionkey().cancel();
+				session.getSelectionKey().cancel();
 				sessionManager.closeSession(session);
 				Log.d(TAG,"ACK to client's FIN and close session => "+PacketUtil.intToIPAddress(ip.getDestinationIP())+":"+tcp.getDestinationPort()
 						+"-"+PacketUtil.intToIPAddress(ip.getSourceIP())+":"+tcp.getSourcePort());

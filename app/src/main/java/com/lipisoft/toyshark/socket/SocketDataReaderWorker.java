@@ -64,7 +64,7 @@ class SocketDataReaderWorker implements Runnable {
 
 		if(session.isAbortingConnection()) {
 			Log.d(TAG,"removing aborted connection -> "+ sessionKey);
-			session.getSelectionkey().cancel();
+			session.getSelectionKey().cancel();
 			if(channel instanceof SocketChannel){
 				try {
 					SocketChannel socketChannel = (SocketChannel) channel;
@@ -188,7 +188,7 @@ class SocketDataReaderWorker implements Runnable {
 			try {
 				writer.write(data);
 				pData.addData(data);
-				//Log.d(TAG,"finished sending "+data.length+" to vpn client: "+PacketUtil.intToIPAddress(session.getDestAddress())+":"+session.getDestPort()+"-"+
+				//Log.d(TAG,"finished sending "+data.length+" to vpn client: "+PacketUtil.intToIPAddress(session.getDestIp())+":"+session.getDestPort()+"-"+
 				//		PacketUtil.intToIPAddress(session.getSourceIp())+":"+session.getSourcePort());
 				
 				/* for debugging purpose 

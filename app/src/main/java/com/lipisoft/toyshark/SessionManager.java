@@ -85,7 +85,7 @@ public class SessionManager {
 	 */
 	void keepSessionAlive(Session session) {
 		if(session != null){
-			String key = createKey(session.getDestAddress(), session.getDestPort(),
+			String key = createKey(session.getDestIp(), session.getDestPort(),
 					session.getSourceIp(), session.getSourcePort());
 			table.put(key, session);
 		}
@@ -219,7 +219,7 @@ public class SessionManager {
 	}
 
 	public void closeSession(@NonNull Session session){
-		String key = SessionManager.createKey(session.getDestAddress(),
+		String key = SessionManager.createKey(session.getDestIp(),
 				session.getDestPort(), session.getSourceIp(),
 				session.getSourcePort());
 		table.remove(key);
@@ -282,7 +282,7 @@ public class SessionManager {
 						selectionKey = channel.register(selector, SelectionKey.OP_CONNECT | SelectionKey.OP_READ |
 								SelectionKey.OP_WRITE);
 					}
-					session.setSelectionkey(selectionKey);
+					session.setSelectionKey(selectionKey);
 					Log.d(TAG,"Registered udp selector successfully");
 				}
 			}
@@ -360,7 +360,7 @@ public class SessionManager {
 					SelectionKey selectionKey = channel.register(selector,
 							SelectionKey.OP_CONNECT | SelectionKey.OP_READ |
 									SelectionKey.OP_WRITE);
-					session.setSelectionkey(selectionKey);
+					session.setSelectionKey(selectionKey);
 					Log.d(TAG,"Registered tcp selector successfully");
 				}
 			}
