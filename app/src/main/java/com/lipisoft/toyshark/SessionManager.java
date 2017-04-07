@@ -149,23 +149,7 @@ public class SessionManager {
 		return null;
 	}
 
-	@Nullable public Session getSessionByDatagramChannel(DatagramChannel channel) {
-		Collection<Session> sessions = table.values();
-
-		for (Session session: sessions) {
-			AbstractSelectableChannel abstractSelectableChannel = session.getChannel();
-			if (abstractSelectableChannel instanceof DatagramChannel) {
-				DatagramChannel datagramChannel = (DatagramChannel) abstractSelectableChannel;
-				if (datagramChannel == channel) {
-					return session;
-				}
-			}
-		}
-
-		return null;
-	}
-
-	public Session getSessionByChannel(SocketChannel channel) {
+	public Session getSessionByChannel(AbstractSelectableChannel channel) {
 		Collection<Session> sessions = table.values();
 
 		for (Session session: sessions) {
@@ -173,6 +157,11 @@ public class SessionManager {
 			if (abstractSelectableChannel instanceof SocketChannel) {
 				SocketChannel socketChannel = (SocketChannel) abstractSelectableChannel;
 				if (socketChannel == channel) {
+					return session;
+				}
+			} else if (abstractSelectableChannel instanceof DatagramChannel) {
+				DatagramChannel datagramChannel = (DatagramChannel) abstractSelectableChannel;
+				if (datagramChannel == channel) {
 					return session;
 				}
 			}
@@ -243,7 +232,7 @@ public class SessionManager {
 
 		Session session = new Session(srcIp, srcPort, ip, port);
 
-		DatagramChannel channel = null;
+		DatagramChannel channel;
 
 		try {
 			channel = DatagramChannel.open();

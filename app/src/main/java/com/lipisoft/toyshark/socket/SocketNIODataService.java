@@ -108,8 +108,8 @@ public class SocketNIODataService implements Runnable {
 			Log.d(TAG,"Invalid SelectionKey for UDP");
 			return;
 		}
-		DatagramChannel channel = (DatagramChannel)key.channel();
-		Session session = sessionManager.getSessionByDatagramChannel(channel);
+		DatagramChannel channel = (DatagramChannel) key.channel();
+		Session session = sessionManager.getSessionByChannel(channel);
 		if(session == null){
 			return;
 		}
