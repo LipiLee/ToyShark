@@ -153,17 +153,8 @@ public class SessionManager {
 		Collection<Session> sessions = table.values();
 
 		for (Session session: sessions) {
-			AbstractSelectableChannel abstractSelectableChannel = session.getChannel();
-			if (abstractSelectableChannel instanceof SocketChannel) {
-				SocketChannel socketChannel = (SocketChannel) abstractSelectableChannel;
-				if (socketChannel == channel) {
-					return session;
-				}
-			} else if (abstractSelectableChannel instanceof DatagramChannel) {
-				DatagramChannel datagramChannel = (DatagramChannel) abstractSelectableChannel;
-				if (datagramChannel == channel) {
-					return session;
-				}
+			if (channel == session.getChannel()) {
+				return session;
 			}
 		}
 
