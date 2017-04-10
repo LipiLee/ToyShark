@@ -25,18 +25,10 @@ import java.util.Queue;
  * Date: May 12, 2014
  */
 public class SocketData {
-	private static final Object syncObj = new Object();
-	private volatile static SocketData instance = null;
+	private static final SocketData instance = new SocketData();
 	private Queue<byte[]> data;
 
 	public static SocketData getInstance(){
-		if(instance == null) {
-			synchronized(syncObj) {
-                if(instance == null) {
-                    instance = new SocketData();
-                }
-			}
-		}
 		return instance;
 	}
 

@@ -41,23 +41,15 @@ import android.util.Log;
 class SessionHandler {
 	private static final String TAG = "SessionHandler";
 
-	private static final Object synObject = new Object();
-	private static volatile SessionHandler handler;
+	private static final SessionHandler handler = new SessionHandler();
 	private IClientPacketWriter writer;
 	private SocketData packetData;
 
-	static SessionHandler getInstance() throws IOException{
-		if(handler == null){
-			synchronized (synObject){
-				if(handler == null){
-					handler = new SessionHandler();
-				}
-			}
-		}
+	public static SessionHandler getInstance(){
 		return handler;
 	}
 
-	private SessionHandler() throws IOException {
+	private SessionHandler(){
 		packetData = SocketData.getInstance();
 	}
 
