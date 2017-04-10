@@ -33,12 +33,10 @@ import java.util.Date;
 class SocketDataReaderWorker implements Runnable {
 	private static final String TAG = "SocketDataReaderWorker";
 	private IClientPacketWriter writer;
-	private SessionManager sessionManager;
 	private String sessionKey;
 	private SocketData pData;
 
 	SocketDataReaderWorker(IClientPacketWriter writer, String sessionKey) {
-		sessionManager = SessionManager.getInstance();
 		pData = SocketData.getInstance();
 		this.writer = writer;
 		this.sessionKey = sessionKey;
@@ -46,7 +44,7 @@ class SocketDataReaderWorker implements Runnable {
 
 	@Override
 	public void run() {
-		Session session = sessionManager.getSessionByKey(sessionKey);
+		Session session = SessionManager.getSessionByKey(sessionKey);
 		if(session == null) {
 			Log.e(TAG, "Session NOT FOUND");
 			return;
@@ -84,7 +82,7 @@ class SocketDataReaderWorker implements Runnable {
 					e.printStackTrace();
 				}
 			}
-			sessionManager.closeSession(session);
+			SessionManager.closeSession(session);
 		} else {
 			session.setBusyread(false);
 		}

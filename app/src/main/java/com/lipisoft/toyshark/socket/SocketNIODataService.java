@@ -30,7 +30,6 @@ public class SocketNIODataService implements Runnable {
 	public static final Object syncSelector = new Object();
 	public static final Object syncSelector2 = new Object();
 
-	private SessionManager sessionManager;
 	private static IClientPacketWriter writer;
 	private volatile boolean shutdown = false;
 	private Selector selector;
@@ -45,9 +44,8 @@ public class SocketNIODataService implements Runnable {
 
 	@Override
 	public void run() {
-		Log.d(TAG,"SocketDataService starting in background...");
-		sessionManager = SessionManager.getInstance();
-		selector = sessionManager.getSelector();
+		Log.d(TAG,"SocketNIODataService starting in background...");
+		selector = SessionManager.getSelector();
 		runTask();
 	}
 	/**
@@ -56,7 +54,7 @@ public class SocketNIODataService implements Runnable {
 	 */
 	public void setShutdown(boolean shutdown){
 		this.shutdown = shutdown;
-		this.sessionManager.getSelector().wakeup();
+		SessionManager.getSelector().wakeup();
 	}
 
 	private void runTask(){
@@ -109,7 +107,7 @@ public class SocketNIODataService implements Runnable {
 			return;
 		}
 		DatagramChannel channel = (DatagramChannel) key.channel();
-		Session session = sessionManager.getSessionByChannel(channel);
+		Session session = SessionManager.getSessionByChannel(channel);
 		if(session == null){
 			return;
 		}
@@ -139,7 +137,7 @@ public class SocketNIODataService implements Runnable {
 			return;
 		}
 		SocketChannel channel = (SocketChannel)key.channel();
-		Session session = sessionManager.getSessionByChannel(channel);
+		Session session = SessionManager.getSessionByChannel(channel);
 		if(session == null){
 			return;
 		}
@@ -153,15 +151,12 @@ public class SocketNIODataService implements Runnable {
 			if(!channel.isConnected() && !channel.isConnectionPending()){
 				try{
 					connected = channel.connect(address);
-				}catch(ClosedChannelException ex){
+				} catch (ClosedChannelException | UnresolvedAddressException |
+						UnsupportedAddressTypeException | SecurityException e) {
+					Log.e(TAG, e.toString());
 					session.setAbortingConnection(true);
-				}catch(UnresolvedAddressException ex2){
-					session.setAbortingConnection(true);
-				}catch(UnsupportedAddressTypeException ex3){
-					session.setAbortingConnection(true);
-				}catch(SecurityException ex4){
-					session.setAbortingConnection(true);
-				}catch(IOException ex5){
+				} catch (IOException e) {
+					Log.e(TAG, e.toString());
 					session.setAbortingConnection(true);
 				}
 			}
@@ -183,7 +178,7 @@ public class SocketNIODataService implements Runnable {
 	}
 
 	private void processSelector(SelectionKey selectionKey, Session session){
-		String sessionKey = sessionManager.createKey(session.getDestIp(),
+		String sessionKey = SessionManager.createKey(session.getDestIp(),
 				session.getDestPort(), session.getSourceIp(),
 				session.getSourcePort());
 		//tcp has PSH flag when data is ready for sending, UDP does not have this
