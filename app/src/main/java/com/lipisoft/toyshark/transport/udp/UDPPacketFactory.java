@@ -46,7 +46,7 @@ public class UDPPacketFactory {
 		short checksum = 0;
 		
 		IPv4Header ipHeader = IPPacketFactory.copyIPv4Header(ip);
-		
+
 		int srcIp = ip.getDestinationIP();
 		int destIp = ip.getSourceIP();
 		ipHeader.setMayFragment(false);
@@ -90,7 +90,9 @@ public class UDPPacketFactory {
 		if (packetData != null)
 		System.arraycopy(packetData, 0, buffer, start, packetData.length);
 
-		Message message = MainActivity.mHandler.obtainMessage(MainActivity.PACKET, new Packet(ipHeader, udp, buffer));
+		UDPHeader udpHeader = new UDPHeader(srcPort, destPort, udpLen, checksum);
+
+		Message message = MainActivity.mHandler.obtainMessage(MainActivity.PACKET, new Packet(ipHeader, udpHeader, buffer));
 		message.sendToTarget();
 
 		return buffer;
