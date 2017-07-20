@@ -156,15 +156,13 @@ public class Session {
 	/**
 	 * append more data
 	 * @param data Data
-	 * @return boolean
 	 */
-	public synchronized boolean addReceivedData(byte[] data){
+	public synchronized void addReceivedData(byte[] data){
 		try {
 			receivingStream.write(data);
 		} catch (IOException e) {
 			Log.e(TAG, e.toString());
 		}
-		return true;
 	}
 
 //	public void resetReceivingData(){
