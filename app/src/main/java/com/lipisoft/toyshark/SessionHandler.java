@@ -186,8 +186,8 @@ class SessionHandler {
 		}
 		Packet packet = new Packet(ipHeader, transportHeader, clientPacketData);
 
-		Message message = MainActivity.mHandler.obtainMessage(MainActivity.PACKET, packet);
-		message.sendToTarget();
+		PacketManager.INSTANCE.add(packet);
+		PacketManager.INSTANCE.getHandler().obtainMessage(PacketManager.PACKET).sendToTarget();
 
 		if(transportHeader instanceof TCPHeader){
 			handleTCPPacket(clientPacketData, ipHeader, (TCPHeader) transportHeader);

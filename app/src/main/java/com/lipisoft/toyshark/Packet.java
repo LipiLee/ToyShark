@@ -35,7 +35,7 @@ public class Packet {
 	@NonNull private byte[] buffer;
 
 //	public Packet(IPv4Header ipHeader, ITransportHeader transportHeader, IApplication application, byte[] data) {
-	public Packet(IPv4Header ipHeader, ITransportHeader transportHeader, byte[] data) {
+	public Packet(@NonNull IPv4Header ipHeader, @NonNull ITransportHeader transportHeader, @NonNull byte[] data) {
 		this.ipHeader = ipHeader;
 		this.transportHeader = transportHeader;
 		this.application = application;

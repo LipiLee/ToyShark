@@ -4,6 +4,7 @@ import android.os.Message;
 
 import com.lipisoft.toyshark.MainActivity;
 import com.lipisoft.toyshark.Packet;
+import com.lipisoft.toyshark.PacketManager;
 import com.lipisoft.toyshark.network.ip.IPPacketFactory;
 import com.lipisoft.toyshark.network.ip.IPv4Header;
 import com.lipisoft.toyshark.transport.tcp.PacketHeaderException;
@@ -92,8 +93,8 @@ public class UDPPacketFactory {
 
 		UDPHeader udpHeader = new UDPHeader(srcPort, destPort, udpLen, checksum);
 
-		Message message = MainActivity.mHandler.obtainMessage(MainActivity.PACKET, new Packet(ipHeader, udpHeader, buffer));
-		message.sendToTarget();
+		PacketManager.INSTANCE.add(new Packet(ipHeader, udpHeader, buffer));
+		PacketManager.INSTANCE.getHandler().obtainMessage(PacketManager.PACKET).sendToTarget();
 
 		return buffer;
 	}

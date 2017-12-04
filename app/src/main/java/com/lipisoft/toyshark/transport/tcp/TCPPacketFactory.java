@@ -22,6 +22,7 @@ import android.util.Log;
 
 import com.lipisoft.toyshark.MainActivity;
 import com.lipisoft.toyshark.Packet;
+import com.lipisoft.toyshark.PacketManager;
 import com.lipisoft.toyshark.network.ip.IPPacketFactory;
 import com.lipisoft.toyshark.network.ip.IPv4Header;
 import com.lipisoft.toyshark.util.PacketUtil;
@@ -390,8 +391,8 @@ public class TCPPacketFactory {
 		//write new checksum back to array
 		System.arraycopy(tcpChecksum, 0, buffer,tcpStart + 16, 2);
 
-		Message message = MainActivity.mHandler.obtainMessage(MainActivity.PACKET, new Packet(ipHeader, tcpheader, buffer));
-		message.sendToTarget();
+		PacketManager.INSTANCE.add(new Packet(ipHeader, tcpheader, buffer));
+		PacketManager.INSTANCE.getHandler().obtainMessage(PacketManager.PACKET).sendToTarget();
 
 		return buffer;
 	}
