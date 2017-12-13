@@ -13,4 +13,5 @@
     <string name="length">Length</string>
     <string name="info">Info</string>
     <string name="no_network_information">No active network connection in your device, please connect to network and start again.</string>
+    <string name="title_activity_detail">DetailActivity</string>
 </resources>
