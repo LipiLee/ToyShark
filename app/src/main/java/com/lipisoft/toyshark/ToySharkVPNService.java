@@ -47,6 +47,8 @@ import java.util.Locale;
 public class ToySharkVPNService extends VpnService implements Handler.Callback,
 		Runnable, IProtectSocket, IReceivePacket{
 	private static final String TAG = "ToySharkVPNService";
+	private static final int MAX_PACKET_LEN = 1500;
+
 	private Handler mHandler;
 	private Thread mThread;
 	private ParcelFileDescriptor mInterface;
@@ -401,7 +403,7 @@ public class ToySharkVPNService extends VpnService implements Handler.Callback,
 		FileOutputStream clientWriter = new FileOutputStream(mInterface.getFileDescriptor());
 
 		// Allocate the buffer for a single packet.
-		ByteBuffer packet = ByteBuffer.allocate(4092);
+		ByteBuffer packet = ByteBuffer.allocate(MAX_PACKET_LEN);
 		IClientPacketWriter clientPacketWriter = new ClientPacketWriterImpl(clientWriter);
 
 		SessionHandler handler = SessionHandler.getInstance();
@@ -425,10 +427,12 @@ public class ToySharkVPNService extends VpnService implements Handler.Callback,
 			//read packet from vpn client
 			data = packet.array();
 			length = clientReader.read(data);
-			if(length > 0){
+			if (length > 0) {
 				//Log.d(TAG, "received packet from vpn client: "+length);
 				try {
-					handler.handlePacket(data, length);
+					packet.limit(length);
+
+					handler.handlePacket(packet.asReadOnlyBuffer());
 				} catch (PacketHeaderException e) {
 					Log.e(TAG,e.getMessage());
 				}

@@ -44,8 +44,7 @@ public class IPPacketFactory {
 				iPv4Header.isMayFragment(), iPv4Header.isLastFragment(),
 				iPv4Header.getFragmentOffset(), iPv4Header.getTimeToLive(),
 				iPv4Header.getProtocol(), iPv4Header.getHeaderChecksum(),
-				iPv4Header.getSourceIP(), iPv4Header.getDestinationIP(),
-				iPv4Header.getOptionBytes());
+				iPv4Header.getSourceIP(), iPv4Header.getDestinationIP());
 	}
 
 	/**
@@ -82,59 +81,54 @@ public class IPPacketFactory {
 		//destination ip address
 		System.arraycopy(buf.array(), 4, buffer, 16, 4);
 
-		final byte[] optionBytes = header.getOptionBytes();
-		if (optionBytes != null)
-			System.arraycopy(optionBytes, 0, buffer, 20, optionBytes.length);
-
 		return buffer;
 	}
 
 	/**
-	 * create IPv4 Header from a given array of byte
-	 * @param buffer array of byte
-	 * @param start position to start extracting data
+	 * create IPv4 Header from a given ByteBuffer stream
+	 * @param stream array of byte
 	 * @return a new instance of IPv4Header
-	 * @throws PacketHeaderException
 	 */
-	public static IPv4Header createIPv4Header(@NonNull byte[] buffer, int start) throws PacketHeaderException{
+	public static IPv4Header createIPv4Header(@NonNull ByteBuffer stream) throws PacketHeaderException{
 		//avoid Index out of range
-		if( (buffer.length - start) < 20) {
+		if (stream.remaining() < 20) {
 			throw new PacketHeaderException("Minimum IPv4 header is 20 bytes. There are less "
 					+ "than 20 bytes from start position to the end of array.");
 		}
 
-		final byte ipVersion = (byte) (buffer[start] >> 4);
+		final byte versionAndHeaderLength = stream.get();
+		final byte ipVersion = (byte) (versionAndHeaderLength >> 4);
 		if (ipVersion != 0x04) {
 			throw new PacketHeaderException("Invalid IPv4 header. IP version should be 4.");
 		}
 
-		final byte internetHeaderLength = (byte) (buffer[start] & 0x0F);
-		if(buffer.length < (start + internetHeaderLength * 4)) {
+		final byte internetHeaderLength = (byte) (versionAndHeaderLength & 0x0F);
+		if(stream.capacity() < internetHeaderLength * 4) {
 			throw new PacketHeaderException("Not enough space in array for IP header");
 		}
 
-		final byte dscp = (byte) (buffer[start + 1] >> 2);
-		final byte ecn = (byte) (buffer[start + 1] & 0x03);
-		final int totalLength = PacketUtil.getNetworkInt(buffer, start + 2, 2);
-		final int identification = PacketUtil.getNetworkInt(buffer, start + 4, 2);
-		final byte flag = buffer[start + 6];
-		final boolean mayFragment = (flag & 0x40) > 0x00;
-		final boolean lastFragment = (flag & 0x20) > 0x00;
-		final short fragmentOffset = (short)
-				(PacketUtil.getNetworkInt(buffer, start + 6, 2) & 0x1FFF);
-		final byte timeToLive = buffer[start + 8];
-		final byte protocol = buffer[start + 9];
-		final int checksum = PacketUtil.getNetworkInt(buffer, start + 10, 2);
-		final int sourceIp = PacketUtil.getNetworkInt(buffer, start + 12, 4);
-		final int desIp = PacketUtil.getNetworkInt(buffer, start + 16, 4);
-		byte[] options = null;
-		if(internetHeaderLength > 5){
-			int optionLength = (internetHeaderLength - 5) * 4;
-			options = new byte[optionLength];
-			System.arraycopy(buffer, start + 20, options, 0, optionLength);
+		final byte dscpAndEcn = stream.get();
+		final byte dscp = (byte) (dscpAndEcn >> 2);
+		final byte ecn = (byte) (dscpAndEcn & 0x03);
+		final int totalLength = stream.getShort();
+		final int identification = stream.getShort();
+		final short flagsAndFragmentOffset = stream.getShort();
+		final boolean mayFragment = (flagsAndFragmentOffset & 0x4000) != 0;
+		final boolean lastFragment = (flagsAndFragmentOffset & 0x2000) != 0;
+		final short fragmentOffset = (short) (flagsAndFragmentOffset & 0x1FFF);
+		final byte timeToLive = stream.get();
+		final byte protocol = stream.get();
+		final int checksum = stream.getShort();
+		final int sourceIp = stream.getInt();
+		final int desIp = stream.getInt();
+		if (internetHeaderLength > 5) {
+			// drop the IP option
+			for (int i = 0; i < internetHeaderLength - 5; i++) {
+				stream.getInt();
+			}
 		}
 		return new IPv4Header(ipVersion, internetHeaderLength, dscp, ecn, totalLength, identification,
 				mayFragment, lastFragment, fragmentOffset, timeToLive, protocol, checksum, sourceIp, 
-				desIp, options);
+				desIp);
 	}
 }

@@ -295,9 +295,9 @@ class SocketDataReaderWorker implements Runnable {
 					buffer.clear();
 					
 					try {
-						IPv4Header ip = IPPacketFactory.createIPv4Header(packetData, 0);
-						UDPHeader udp = UDPPacketFactory.createUDPHeader(
-								packetData, ip.getIPHeaderLength());
+						final ByteBuffer stream = ByteBuffer.wrap(packetData);
+						IPv4Header ip = IPPacketFactory.createIPv4Header(stream);
+						UDPHeader udp = UDPPacketFactory.createUDPHeader(stream);
 						String str = PacketUtil.getUDPoutput(ip, udp);
 						Log.d(TAG,"++++++ SD: packet sending to client ++++++++");
 						Log.i(TAG,"got response time: " + responseTime);

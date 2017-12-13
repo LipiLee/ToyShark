@@ -17,6 +17,7 @@
 package com.lipisoft.toyshark.transport.tcp;
 
 import android.os.Message;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
@@ -27,6 +28,7 @@ import com.lipisoft.toyshark.network.ip.IPPacketFactory;
 import com.lipisoft.toyshark.network.ip.IPv4Header;
 import com.lipisoft.toyshark.util.PacketUtil;
 
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Date;
@@ -463,66 +465,57 @@ public class TCPPacketFactory {
 	}
 	/**
 	 * create a TCP Header from a given byte array
-	 * @param buffer array of byte
-	 * @param start position to start extracting data
+	 * @param stream array of byte
 	 * @return a new instance of TCPHeader
 	 * @throws PacketHeaderException throws PacketHeaderException
 	 */
-	public static TCPHeader createTCPHeader(byte[] buffer, int start) throws PacketHeaderException{
-		if(buffer.length < start + 20){
+	public static TCPHeader createTCPHeader(@NonNull ByteBuffer stream) throws PacketHeaderException {
+		if(stream.remaining() < 20){
 			throw new PacketHeaderException("There is not enough space for TCP header from provided starting position");
 		}
-		int sourcePort = PacketUtil.getNetworkInt(buffer, start, 2);
-		int destPort = PacketUtil.getNetworkInt(buffer, start + 2, 2);
-		long sequenceNumber = PacketUtil.getNetworkLong(buffer, start + 4, 4);
-		long ackNumber = PacketUtil.getNetworkLong(buffer, start + 8, 4);
-		int dataOffset = (buffer[start + 12] >> 4) & 0x0F;
-		if(dataOffset < 5 && buffer.length == 60){
-			dataOffset = 10;
-		}else if(dataOffset < 5){
-			dataOffset = 5;
-		}
-		if(buffer.length < (start + dataOffset * 4)){
+
+		final int sourcePort = stream.getShort();
+		final int destPort = stream.getShort();
+		final long sequenceNumber = stream.getInt();
+		final long ackNumber = stream.getInt();
+		final int dataOffsetAndNs = stream.get();
+
+		final int dataOffset = (dataOffsetAndNs & 0xF0) >> 4;
+		if(stream.remaining() < (dataOffset - 5) * 4){
 			throw new PacketHeaderException("invalid array size for TCP header from given starting position");
 		}
 		
-		byte nsbyte = buffer[start + 12];
-		boolean isNs = (nsbyte & 0x1) > 0x0;
-		
-		int tcpFlag = PacketUtil.getNetworkInt(buffer, start + 13, 1);
-		int windowSize = PacketUtil.getNetworkInt(buffer, start + 14, 2);
-		int checksum = PacketUtil.getNetworkInt(buffer, start + 16, 2);
-		int urgentPointer = PacketUtil.getNetworkInt(buffer, start + 18, 2);
-		byte[] options;
-		if(dataOffset > 5){
-			int optionLength = (dataOffset - 5) * 4;
+		final boolean isNs = (dataOffsetAndNs & 0x1) > 0x0;
+		final int tcpFlag = stream.get();
+		final int windowSize = stream.getShort();
+		final int checksum = stream.getShort();
+		final int urgentPointer = stream.getShort();
 
-			options = new byte[optionLength];
-			System.arraycopy(buffer, start + 20, options, 0, optionLength);
-		}else{
-			options = new byte[0];
-		}
-		TCPHeader head = new TCPHeader(sourcePort, destPort, sequenceNumber, dataOffset, isNs, tcpFlag, windowSize, checksum, urgentPointer, options, ackNumber);
+		final ByteBuffer option = stream.compact();
+		option.limit((dataOffset - 5) * 4);
+		final TCPHeader head = new TCPHeader(sourcePort, destPort, sequenceNumber, dataOffset, isNs, tcpFlag, windowSize, checksum, urgentPointer, option.array(), ackNumber);
 		extractOptionData(head);
+
 		return head;
 	}
-	private static void extractOptionData(TCPHeader head){
-		final byte[] options = head.getOptions();
+
+	private static void extractOptionData(TCPHeader header) {
+		final byte[] options = header.getOptions();
 		if (options != null) {
 			for (int i = 0; i < options.length; i++) {
 				final byte kind = options[i];
 				if (kind == 2) {
 					i += 2;
 					int segSize = PacketUtil.getNetworkInt(options, i, 2);
-					head.setMaxSegmentSize(segSize);
+					header.setMaxSegmentSize(segSize);
 					i++;
 				} else if (kind == 3) {
 					i += 2;
 					int scale = PacketUtil.getNetworkInt(options, i, 1);
-					head.setWindowScale(scale);
+					header.setWindowScale(scale);
 				} else if (kind == 4) {
 					i++;
-					head.setSelectiveAckPermitted(true);
+					header.setSelectiveAckPermitted(true);
 				} else if (kind == 5) {//SACK => selective acknowledgment
 					i++;
 					int sackLength = PacketUtil.getNetworkInt(options, i, 1);
@@ -536,8 +529,8 @@ public class TCPPacketFactory {
 					i += 4;
 					int timestampReplyTo = PacketUtil.getNetworkInt(options, i, 4);
 					i += 3;
-					head.setTimeStampSender(timestampSender);
-					head.setTimeStampReplyTo(timestampReplyTo);
+					header.setTimeStampSender(timestampSender);
+					header.setTimeStampReplyTo(timestampReplyTo);
 				}
 			}
 		}

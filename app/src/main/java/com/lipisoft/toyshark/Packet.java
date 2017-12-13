@@ -22,6 +22,10 @@ import android.support.annotation.Nullable;
 import com.lipisoft.toyshark.application.IApplication;
 import com.lipisoft.toyshark.network.ip.IPv4Header;
 import com.lipisoft.toyshark.transport.ITransportHeader;
+import com.lipisoft.toyshark.transport.tcp.TCPHeader;
+import com.lipisoft.toyshark.transport.udp.UDPHeader;
+
+import java.nio.ByteBuffer;
 
 /**
  * Data structure that encapsulate both IPv4Header and TCPHeader
@@ -29,16 +33,20 @@ import com.lipisoft.toyshark.transport.ITransportHeader;
  * Date: May 27, 2014
  */
 public class Packet {
-	@NonNull private IPv4Header ipHeader;
-	@NonNull private ITransportHeader transportHeader;
-	@Nullable private IApplication application;
-	@NonNull private byte[] buffer;
+	@NonNull private final IPv4Header ipHeader;
+	@NonNull private final ITransportHeader transportHeader;
+	@NonNull private final byte[] buffer;
 
 //	public Packet(IPv4Header ipHeader, ITransportHeader transportHeader, IApplication application, byte[] data) {
 	public Packet(@NonNull IPv4Header ipHeader, @NonNull ITransportHeader transportHeader, @NonNull byte[] data) {
 		this.ipHeader = ipHeader;
 		this.transportHeader = transportHeader;
-		this.application = application;
+		int transportLength;
+		if (transportHeader instanceof TCPHeader) {
+			transportLength = ((TCPHeader) transportHeader).getDataOffset();
+		} else if (transportHeader instanceof UDPHeader) {
+			transportLength = 8;
+		}
 		buffer = data;
 	}
 
@@ -73,8 +81,4 @@ public class Packet {
 		return buffer;
 	}
 
-	@Nullable
-	public IApplication getApplication() {
-		return application;
-	}
 }

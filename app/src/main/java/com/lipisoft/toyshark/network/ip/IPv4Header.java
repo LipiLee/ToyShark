@@ -67,9 +67,6 @@ public class IPv4Header {
 	
 	private int destinationIP;
 
-	@Nullable
-	private byte[] optionBytes;
-	
 	/**
 	 * create a new IPv4 Header
 	 * @param ipVersion the first header field in an IP packet. It is four-bit. For IPv4, this has a value of 4.
@@ -87,15 +84,13 @@ public class IPv4Header {
 	 * @param headerChecksum 16-bits field used for error-checking of the header
 	 * @param sourceIP IPv4 address of sender.
 	 * @param destinationIP IPv4 address of receiver.
-	 * @param optionBytes optional field.
 	 */
 	public IPv4Header(byte ipVersion, byte internetHeaderLength,
 					  byte dscpOrTypeOfService, byte ecn, int totalLength,
 					  int identification, boolean mayFragment,
 					  boolean lastFragment, short fragmentOffset,
 					  byte timeToLive, byte protocol, int headerChecksum,
-					  int sourceIP, int destinationIP,
-					  @Nullable byte[] optionBytes){
+					  int sourceIP, int destinationIP){
 		this.ipVersion = ipVersion;
 		this.internetHeaderLength = internetHeaderLength;
 		this.dscpOrTypeOfService = dscpOrTypeOfService;
@@ -116,7 +111,6 @@ public class IPv4Header {
 		this.headerChecksum = headerChecksum;
 		this.sourceIP = sourceIP;
 		this.destinationIP = destinationIP;
-		this.optionBytes = optionBytes;
 	}
 
 	public byte getIpVersion() {
@@ -188,10 +182,6 @@ public class IPv4Header {
 
 	public int getDestinationIP() {
 		return destinationIP;
-	}
-
-	@Nullable byte[] getOptionBytes() {
-		return optionBytes;
 	}
 
 	public void setTotalLength(int totalLength) {

@@ -1,6 +1,7 @@
 package com.lipisoft.toyshark.transport.udp;
 
 import android.os.Message;
+import android.support.annotation.NonNull;
 
 import com.lipisoft.toyshark.MainActivity;
 import com.lipisoft.toyshark.Packet;
@@ -10,17 +11,19 @@ import com.lipisoft.toyshark.network.ip.IPv4Header;
 import com.lipisoft.toyshark.transport.tcp.PacketHeaderException;
 import com.lipisoft.toyshark.util.PacketUtil;
 
+import java.nio.ByteBuffer;
+
 public class UDPPacketFactory {
 	private static final String TAG = "UDPPacketFactory";
 
-	public static UDPHeader createUDPHeader(byte[] buffer, int start) throws PacketHeaderException{
-		if((buffer.length - start) < 8){
+	public static UDPHeader createUDPHeader(@NonNull ByteBuffer stream) throws PacketHeaderException{
+		if ((stream.remaining()) < 8){
 			throw new PacketHeaderException("Minimum UDP header is 8 bytes.");
 		}
-		int srcPort = PacketUtil.getNetworkInt(buffer, start, 2);
-		int destPort = PacketUtil.getNetworkInt(buffer, start + 2, 2);
-		int length = PacketUtil.getNetworkInt(buffer, start + 4,2);
-		int checksum = PacketUtil.getNetworkInt(buffer, start + 6,2);
+		final int srcPort = stream.getShort();
+		final int destPort = stream.getShort();
+		final int length = stream.getShort();
+		final int checksum = stream.getShort();
 
 		return new UDPHeader(srcPort, destPort, length, checksum);
 	}

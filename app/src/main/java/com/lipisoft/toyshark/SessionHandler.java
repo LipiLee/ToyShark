@@ -17,6 +17,7 @@
 package com.lipisoft.toyshark;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Date;
 
 import com.lipisoft.toyshark.network.ip.IPPacketFactory;
@@ -31,6 +32,7 @@ import com.lipisoft.toyshark.transport.udp.UDPPacketFactory;
 import com.lipisoft.toyshark.util.PacketUtil;
 
 import android.os.Message;
+import android.support.annotation.NonNull;
 import android.util.Log;
 
 /**
@@ -160,39 +162,30 @@ class SessionHandler {
 
 	/**
 	 * handle each packet from each vpn client
-	 * @param data packet data
-	 * @param length packet length to be read
-	 * @throws PacketHeaderException throws PacketHeaderException
+	 * @param stream ByteBuffer to be read
 	 */
-	void handlePacket(byte[] data, int length) throws PacketHeaderException {
-		byte[] clientPacketData = new byte[length];
-		System.arraycopy(data, 0, clientPacketData, 0, length);
-		packetData.addData(clientPacketData);
-		IPv4Header ipHeader = IPPacketFactory.createIPv4Header(clientPacketData, 0);
-
-		if(ipHeader.getIpVersion() != 4) {
-			Log.e(TAG, "********===> Unsupported IP Version: " + ipHeader.getIpVersion());
-			return;
-		}
+	void handlePacket(@NonNull ByteBuffer stream) throws PacketHeaderException {
+		packetData.addData(stream.array());
+		final IPv4Header ipHeader = IPPacketFactory.createIPv4Header(stream);
 
 		final ITransportHeader transportHeader;
 		if(ipHeader.getProtocol() == 6) {
-			transportHeader = TCPPacketFactory.createTCPHeader(clientPacketData, ipHeader.getIPHeaderLength());
+			transportHeader = TCPPacketFactory.createTCPHeader(stream);
 		} else if(ipHeader.getProtocol() == 17) {
-			transportHeader = UDPPacketFactory.createUDPHeader(clientPacketData, ipHeader.getIPHeaderLength());
+			transportHeader = UDPPacketFactory.createUDPHeader(stream);
 		} else {
 			Log.e(TAG, "******===> Unsupported protocol: " + ipHeader.getProtocol());
 			return;
 		}
-		Packet packet = new Packet(ipHeader, transportHeader, clientPacketData);
 
+		final Packet packet = new Packet(ipHeader, transportHeader, stream.array());
 		PacketManager.INSTANCE.add(packet);
 		PacketManager.INSTANCE.getHandler().obtainMessage(PacketManager.PACKET).sendToTarget();
 
-		if(transportHeader instanceof TCPHeader){
-			handleTCPPacket(clientPacketData, ipHeader, (TCPHeader) transportHeader);
-		}else if(ipHeader.getProtocol() == 17){
-			handleUDPPacket(clientPacketData, ipHeader, (UDPHeader) transportHeader);
+		if (transportHeader instanceof TCPHeader) {
+			handleTCPPacket(stream.array(), ipHeader, (TCPHeader) transportHeader);
+		} else if (ipHeader.getProtocol() == 17){
+			handleUDPPacket(stream.array(), ipHeader, (UDPHeader) transportHeader);
 		}
 	}
 
@@ -227,31 +220,35 @@ class SessionHandler {
 		}
 	}
 	private void sendFinAck(IPv4Header ip, TCPHeader tcp, Session session){
-		long ack = tcp.getSequenceNumber();
-		long seq = tcp.getAckNumber();
-		byte[] data = TCPPacketFactory.createFinAckData(ip, tcp, ack, seq,true,false);
+		final long ack = tcp.getSequenceNumber();
+		final long seq = tcp.getAckNumber();
+		final byte[] data = TCPPacketFactory.createFinAckData(ip, tcp, ack, seq,true,false);
+		final ByteBuffer stream = ByteBuffer.wrap(data);
 		try {
 			writer.write(data);
 			packetData.addData(data);
 			Log.d(TAG,"00000000000 FIN-ACK packet data to vpn client 000000000000");
 			IPv4Header vpnip = null;
 			try {
-				vpnip = IPPacketFactory.createIPv4Header(data, 0);
+				vpnip = IPPacketFactory.createIPv4Header(stream);
 			} catch (PacketHeaderException e) {
 				e.printStackTrace();
 			}
+
 			TCPHeader vpntcp = null;
 			try {
 				if (vpnip != null)
-					vpntcp = TCPPacketFactory.createTCPHeader(data, vpnip.getIPHeaderLength());
+					vpntcp = TCPPacketFactory.createTCPHeader(stream);
 			} catch (PacketHeaderException e) {
 				e.printStackTrace();
 			}
+
 			if(vpnip != null && vpntcp != null){
 				String sout = PacketUtil.getOutput(vpnip, vpntcp, data);
 				Log.d(TAG,sout);
 			}
 			Log.d(TAG,"0000000000000 finished sending FIN-ACK packet to vpn client 000000000000");
+
 		} catch (IOException e) {
 			Log.e(TAG,"Failed to send ACK packet: "+e.getMessage());
 		}
