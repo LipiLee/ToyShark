@@ -43,12 +43,11 @@ public class TCPPacketFactory {
 	public static final String TAG = "TCPPacketFactory";
 	
 	private static TCPHeader copyTCPHeader(TCPHeader tcpheader){
-		TCPHeader tcp = new TCPHeader(tcpheader.getSourcePort(),
+		final TCPHeader tcp = new TCPHeader(tcpheader.getSourcePort(),
 				tcpheader.getDestinationPort(), tcpheader.getSequenceNumber(),
-				tcpheader.getDataOffset(), tcpheader.isNS(),
+				tcpheader.getAckNumber(), tcpheader.getDataOffset(), tcpheader.isNS(),
 				tcpheader.getTcpFlags(), tcpheader.getWindowSize(),
-				tcpheader.getChecksum(), tcpheader.getUrgentPointer(),
-				tcpheader.getOptions(), tcpheader.getAckNumber());
+				tcpheader.getChecksum(), tcpheader.getUrgentPointer());
 
 		tcp.setMaxSegmentSize(65535);//tcpheader.getMaxSegmentSize());
 		tcp.setWindowScale(tcpheader.getWindowScale());
@@ -470,18 +469,18 @@ public class TCPPacketFactory {
 	 * @throws PacketHeaderException throws PacketHeaderException
 	 */
 	public static TCPHeader createTCPHeader(@NonNull ByteBuffer stream) throws PacketHeaderException {
-		if(stream.remaining() < 20){
+		if(stream.remaining() < 20) {
 			throw new PacketHeaderException("There is not enough space for TCP header from provided starting position");
 		}
 
-		final int sourcePort = stream.getShort();
-		final int destPort = stream.getShort();
+		final int sourcePort = stream.getShort() & 0xFFFF;
+		final int destPort = stream.getShort() & 0xFFFF;
 		final long sequenceNumber = stream.getInt();
 		final long ackNumber = stream.getInt();
 		final int dataOffsetAndNs = stream.get();
 
 		final int dataOffset = (dataOffsetAndNs & 0xF0) >> 4;
-		if(stream.remaining() < (dataOffset - 5) * 4){
+		if(stream.remaining() < (dataOffset - 5) * 4) {
 			throw new PacketHeaderException("invalid array size for TCP header from given starting position");
 		}
 		
@@ -491,48 +490,64 @@ public class TCPPacketFactory {
 		final int checksum = stream.getShort();
 		final int urgentPointer = stream.getShort();
 
-		final ByteBuffer option = stream.compact();
-		option.limit((dataOffset - 5) * 4);
-		final TCPHeader head = new TCPHeader(sourcePort, destPort, sequenceNumber, dataOffset, isNs, tcpFlag, windowSize, checksum, urgentPointer, option.array(), ackNumber);
-		extractOptionData(head);
+		final TCPHeader header = new TCPHeader(sourcePort, destPort, sequenceNumber, ackNumber, dataOffset, isNs, tcpFlag, windowSize, checksum, urgentPointer);
+		if (dataOffset > 5) {
+			handleTcpOptions(header, stream, dataOffset * 4 - 20);
+		}
 
-		return head;
+		return header;
 	}
 
-	private static void extractOptionData(TCPHeader header) {
-		final byte[] options = header.getOptions();
-		if (options != null) {
-			for (int i = 0; i < options.length; i++) {
-				final byte kind = options[i];
-				if (kind == 2) {
-					i += 2;
-					int segSize = PacketUtil.getNetworkInt(options, i, 2);
-					header.setMaxSegmentSize(segSize);
-					i++;
-				} else if (kind == 3) {
-					i += 2;
-					int scale = PacketUtil.getNetworkInt(options, i, 1);
-					header.setWindowScale(scale);
-				} else if (kind == 4) {
-					i++;
-					header.setSelectiveAckPermitted(true);
-				} else if (kind == 5) {//SACK => selective acknowledgment
-					i++;
-					int sackLength = PacketUtil.getNetworkInt(options, i, 1);
-					i = i + (sackLength - 2);
-					//case 10, 18, 26 and 34
-					//TODO: handle missing segments
-					//rare case => low priority
-				} else if (kind == 8) {//timestamp and echo of previous timestamp
-					i += 2;
-					int timestampSender = PacketUtil.getNetworkInt(options, i, 4);
-					i += 4;
-					int timestampReplyTo = PacketUtil.getNetworkInt(options, i, 4);
-					i += 3;
-					header.setTimeStampSender(timestampSender);
-					header.setTimeStampReplyTo(timestampReplyTo);
-				}
+	private static final int END_OF_OPTIONS_LIST = 0;
+	private static final int NO_OPERATION = 1;
+	private static final int MAX_SEGMENT_SIZE = 2;
+	private static final int WINDOW_SCALE = 3;
+	private static final int SELECTIVE_ACK_PERMITTED = 4;
+//	private static final int SELECTIVE_ACK = 5;
+	private static final int TIME_STAMP = 8;
+
+	private static void handleTcpOptions(@NonNull TCPHeader header, @NonNull ByteBuffer packet, int optionsSize) {
+		int index = 0;
+
+		while (index < optionsSize) {
+			final byte optionKind = packet.get();
+			index++;
+
+			if (optionKind == END_OF_OPTIONS_LIST || optionKind == NO_OPERATION) {
+				continue;
 			}
+
+			final byte size = packet.get();
+			index++;
+
+			switch (optionKind) {
+				case MAX_SEGMENT_SIZE:
+					header.setMaxSegmentSize(packet.getShort());
+					index += 2;
+					break;
+				case WINDOW_SCALE:
+					header.setWindowScale(packet.get());
+					index++;
+					break;
+				case SELECTIVE_ACK_PERMITTED:
+					header.setSelectiveAckPermitted(true);
+					break;
+				case TIME_STAMP:
+					header.setTimeStampSender(packet.getInt());
+					header.setTimeStampReplyTo(packet.getInt());
+					index += 8;
+					break;
+				default:
+					skipRemainingOptions(packet, size);
+					index = index + size - 2;
+					break;
+			}
+		}
+	}
+
+	private static void skipRemainingOptions(@NonNull ByteBuffer packet, int size) {
+		for (int i = 2; i < size; i++) {
+			packet.get();
 		}
 	}
 }

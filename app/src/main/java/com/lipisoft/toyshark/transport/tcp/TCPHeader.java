@@ -51,10 +51,9 @@ public class TCPHeader implements ITransportHeader{
 	private int timeStampSender = 0;
 	private int timeStampReplyTo = 0;
 
-	TCPHeader(int sourcePort, int destinationPort, long sequenceNumber,
+	TCPHeader(int sourcePort, int destinationPort, long sequenceNumber, long ackNumber,
 			  int dataOffset, boolean isns, int tcpFlags,
-			  int windowSize, int checksum, int urgentPointer,
-			  @Nullable byte[] options, long ackNumber){
+			  int windowSize, int checksum, int urgentPointer) {
 		this.sourcePort = sourcePort;
 		this.destinationPort = destinationPort;
 		this.sequenceNumber = sequenceNumber;
@@ -64,7 +63,6 @@ public class TCPHeader implements ITransportHeader{
 		this.windowSize = windowSize;
 		this.checksum = checksum;
 		this.urgentPointer = urgentPointer;
-		this.options = options;
 		this.ackNumber = ackNumber;
 		setFlagBits();
 	}
