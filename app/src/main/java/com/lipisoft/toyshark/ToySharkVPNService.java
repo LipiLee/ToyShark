@@ -432,7 +432,7 @@ public class ToySharkVPNService extends VpnService implements Handler.Callback,
 				try {
 					packet.limit(length);
 
-					handler.handlePacket(packet.asReadOnlyBuffer());
+					handler.handlePacket(packet);
 				} catch (PacketHeaderException e) {
 					Log.e(TAG,e.getMessage());
 				}
