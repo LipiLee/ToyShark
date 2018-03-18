@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.SocketException;
+import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
@@ -110,7 +111,7 @@ public class SessionManager {
 	 * @param tcp TCP Header
 	 * @param buffer Data
 	 */
-	public static int addClientData(IPv4Header ip, TCPHeader tcp, byte[] buffer){
+	public static int addClientData(IPv4Header ip, TCPHeader tcp, ByteBuffer buffer) {
 		Session session = getSession(ip.getDestinationIP(), tcp.getDestinationPort(), ip.getSourceIP(), tcp.getSourcePort());
 		if(session == null)
 			return 0;
@@ -120,9 +121,11 @@ public class SessionManager {
 			return 0;
 		}
 		int start = ip.getIPHeaderLength() + tcp.getTCPHeaderLength();
-		int len = buffer.length - start;
+		int len = buffer.limit() - buffer.position();
 		byte[] data = new byte[len];
-		System.arraycopy(buffer, start, data, 0, len);
+		for (int i = 0; i < len; i++)
+			data[i] = buffer.get();
+
 		//appending data to buffer
 		session.setSendingData(data);
 		return len;

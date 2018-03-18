@@ -80,9 +80,9 @@ class SessionHandler {
 		SessionManager.keepSessionAlive(session);
 	}
 
-	private void handleTCPPacket(byte[] clientPacketData, IPv4Header ipHeader, TCPHeader tcpheader){
-		int length = clientPacketData.length;
-		int dataLength = length - ipHeader.getIPHeaderLength() - tcpheader.getTCPHeaderLength();
+	private void handleTCPPacket(ByteBuffer clientPacketData, IPv4Header ipHeader, TCPHeader tcpheader){
+//		int length = clientPacketData.length;
+		int dataLength = clientPacketData.limit() - clientPacketData.position();
 		int sourceIP = ipHeader.getSourceIP();
 		int destinationIP = ipHeader.getDestinationIP();
 		int sourcePort = tcpheader.getSourcePort();
@@ -151,9 +151,9 @@ class SessionHandler {
 
 		} else if(tcpheader.isRST()){
 			resetConnection(ipHeader, tcpheader);
-		} else{
+		} else {
 			Log.d(TAG,"unknown TCP flag");
-			String str1 = PacketUtil.getOutput(ipHeader, tcpheader, clientPacketData);
+			String str1 = PacketUtil.getOutput(ipHeader, tcpheader, clientPacketData.array());
 			Log.d(TAG,">>>>>>>> Received from client <<<<<<<<<<");
 			Log.d(TAG,str1);
 			Log.d(TAG,">>>>>>>>>>>>>>>>>>>end receiving from client>>>>>>>>>>>>>>>>>>>>>");
@@ -183,7 +183,7 @@ class SessionHandler {
 		PacketManager.INSTANCE.getHandler().obtainMessage(PacketManager.PACKET).sendToTarget();
 
 		if (transportHeader instanceof TCPHeader) {
-			handleTCPPacket(stream.array(), ipHeader, (TCPHeader) transportHeader);
+			handleTCPPacket(stream, ipHeader, (TCPHeader) transportHeader);
 		} else if (ipHeader.getProtocol() == 17){
 			handleUDPPacket(stream.array(), ipHeader, (UDPHeader) transportHeader);
 		}
