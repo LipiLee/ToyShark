@@ -59,7 +59,7 @@ class SessionHandler {
 		this.writer = writer;
 	}
 
-	private void handleUDPPacket(byte[] clientPacketData, IPv4Header ipHeader, UDPHeader udpheader){
+	private void handleUDPPacket(ByteBuffer clientPacketData, IPv4Header ipHeader, UDPHeader udpheader){
 		Session session = SessionManager.getSession(ipHeader.getDestinationIP(), udpheader.getDestinationPort(),
 				ipHeader.getSourceIP(), udpheader.getSourcePort());
 
@@ -74,7 +74,7 @@ class SessionHandler {
 
 		session.setLastIpHeader(ipHeader);
 		session.setLastUdpHeader(udpheader);
-		int len = SessionManager.addClientUDPData(ipHeader, udpheader, clientPacketData, session);
+		int len = SessionManager.addClientData(clientPacketData, session);
 		session.setDataForSendingReady(true);
 		Log.d(TAG,"added UDP data for bg worker to send: "+len);
 		SessionManager.keepSessionAlive(session);
@@ -105,12 +105,12 @@ class SessionHandler {
 			}
 
 			//any data from client?
-			if(dataLength > 0){
+			if(dataLength > 0) {
 				//accumulate data from client
-				int totalAdded = SessionManager.addClientData(ipHeader, tcpheader, clientPacketData);
-				if(totalAdded > 0){
+				if(session.getRecSequence() == 0 || tcpheader.getSequenceNumber() >= session.getRecSequence()) {
+					int addedLength = SessionManager.addClientData(clientPacketData, session);
 					//send ack to client only if new data was added
-					sendAck(ipHeader,tcpheader,totalAdded, session);
+					sendAck(ipHeader, tcpheader, addedLength, session);
 				}
 			} else {
 				//an ack from client for previously sent data
@@ -185,7 +185,7 @@ class SessionHandler {
 		if (transportHeader instanceof TCPHeader) {
 			handleTCPPacket(stream, ipHeader, (TCPHeader) transportHeader);
 		} else if (ipHeader.getProtocol() == 17){
-			handleUDPPacket(stream.array(), ipHeader, (UDPHeader) transportHeader);
+			handleUDPPacket(stream, ipHeader, (UDPHeader) transportHeader);
 		}
 	}
 

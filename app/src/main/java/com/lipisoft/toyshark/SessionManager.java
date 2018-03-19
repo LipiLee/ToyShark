@@ -85,50 +85,37 @@ public class SessionManager {
 		}
 	}
 
-//	public Iterator<Session> getAllSession(){
-//		return table.values().iterator();
-//	}
+	private static byte[] getRemainingBytes(ByteBuffer buffer) {
+		int length = buffer.limit() - buffer.position();
+		byte[] remainingBytes = new byte[length];
 
-	public static int addClientUDPData(IPv4Header ip, UDPHeader udp, byte[] buffer, Session session){
-		int start = ip.getIPHeaderLength() + 8;
-		int len = udp.getLength() - 8; //exclude header size
-		if(len < 1)
+		for (int i = 0; i < length; i++)
+			remainingBytes[i] = buffer.get();
+
+		return remainingBytes;
+	}
+
+	public static int addClientUDPData(ByteBuffer buffer, Session session){
+		if (buffer.limit() <= buffer.position())
 			return 0;
+		byte[] udpPayload = SessionManager.getRemainingBytes(buffer);
+		session.setSendingData(SessionManager.getRemainingBytes(buffer));
 
-		if((buffer.length - start) < len)
-			len = buffer.length - start;
-
-		byte[] data = new byte[len];
-		System.arraycopy(buffer, start, data, 0, len);
-		session.setSendingData(data);
-
-		return len;
+		return udpPayload.length;
 	}
 
 	/**
 	 * add data from client which will be sending to the destination server later one when receiving PSH flag.
-	 * @param ip IP Header
-	 * @param tcp TCP Header
 	 * @param buffer Data
+	 * @param session Data
 	 */
-	public static int addClientData(IPv4Header ip, TCPHeader tcp, ByteBuffer buffer) {
-		Session session = getSession(ip.getDestinationIP(), tcp.getDestinationPort(), ip.getSourceIP(), tcp.getSourcePort());
-		if(session == null)
+	public static int addClientData(ByteBuffer buffer, Session session) {
+		if (buffer.limit() <= buffer.position())
 			return 0;
-
-		//check for duplicate data
-		if(session.getRecSequence() != 0 && tcp.getSequenceNumber() < session.getRecSequence()){
-			return 0;
-		}
-		int start = ip.getIPHeaderLength() + tcp.getTCPHeaderLength();
-		int len = buffer.limit() - buffer.position();
-		byte[] data = new byte[len];
-		for (int i = 0; i < len; i++)
-			data[i] = buffer.get();
-
+		byte[] payload = SessionManager.getRemainingBytes(buffer);
 		//appending data to buffer
-		session.setSendingData(data);
-		return len;
+		session.setSendingData(payload);
+		return payload.length;
 	}
 
 	public static Session getSession(int ip, int port, int srcIp, int srcPort) {
