@@ -95,15 +95,6 @@ public class SessionManager {
 		return remainingBytes;
 	}
 
-	public static int addClientUDPData(ByteBuffer buffer, Session session){
-		if (buffer.limit() <= buffer.position())
-			return 0;
-		byte[] udpPayload = SessionManager.getRemainingBytes(buffer);
-		session.setSendingData(SessionManager.getRemainingBytes(buffer));
-
-		return udpPayload.length;
-	}
-
 	/**
 	 * add data from client which will be sending to the destination server later one when receiving PSH flag.
 	 * @param buffer Data
