@@ -30,7 +30,7 @@ public class SocketDataWriterWorker implements Runnable {
 
 	@Override
 	public void run() {
-		final Session session = SessionManager.getSessionByKey(sessionKey);
+		final Session session = SessionManager.INSTANCE.getSessionByKey(sessionKey);
 		if(session == null) {
 			Log.d(TAG, "No session related to " + sessionKey + "for write");
 			return;
@@ -71,7 +71,7 @@ public class SocketDataWriterWorker implements Runnable {
 					e.printStackTrace();
 				}
 			}
-			SessionManager.closeSession(session);
+			SessionManager.INSTANCE.closeSession(session);
 		}
 	}
 

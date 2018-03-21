@@ -60,11 +60,11 @@ class SessionHandler {
 	}
 
 	private void handleUDPPacket(ByteBuffer clientPacketData, IPv4Header ipHeader, UDPHeader udpheader){
-		Session session = SessionManager.getSession(ipHeader.getDestinationIP(), udpheader.getDestinationPort(),
+		Session session = SessionManager.INSTANCE.getSession(ipHeader.getDestinationIP(), udpheader.getDestinationPort(),
 				ipHeader.getSourceIP(), udpheader.getSourcePort());
 
 		if(session == null){
-			session = SessionManager.createNewUDPSession(ipHeader.getDestinationIP(), udpheader.getDestinationPort(),
+			session = SessionManager.INSTANCE.createNewUDPSession(ipHeader.getDestinationIP(), udpheader.getDestinationPort(),
 					ipHeader.getSourceIP(), udpheader.getSourcePort());
 		}
 
@@ -74,10 +74,10 @@ class SessionHandler {
 
 		session.setLastIpHeader(ipHeader);
 		session.setLastUdpHeader(udpheader);
-		int len = SessionManager.addClientData(clientPacketData, session);
+		int len = SessionManager.INSTANCE.addClientData(clientPacketData, session);
 		session.setDataForSendingReady(true);
 		Log.d(TAG,"added UDP data for bg worker to send: "+len);
-		SessionManager.keepSessionAlive(session);
+		SessionManager.INSTANCE.keepSessionAlive(session);
 	}
 
 	private void handleTCPPacket(ByteBuffer clientPacketData, IPv4Header ipHeader, TCPHeader tcpheader){
@@ -94,7 +94,7 @@ class SessionHandler {
 			replySynAck(ipHeader,tcpheader);
 		} else if(tcpheader.isACK()) {
 			String key = SessionManager.createKey(destinationIP, destinationPort, sourceIP, sourcePort);
-			Session session = SessionManager.getSessionByKey(key);
+			Session session = SessionManager.INSTANCE.getSessionByKey(key);
 
 			if(session == null) {
 				Log.e(TAG,"**** ==> Session not found: " + key);
@@ -108,7 +108,7 @@ class SessionHandler {
 			if(dataLength > 0) {
 				//accumulate data from client
 				if(session.getRecSequence() == 0 || tcpheader.getSequenceNumber() >= session.getRecSequence()) {
-					int addedLength = SessionManager.addClientData(clientPacketData, session);
+					int addedLength = SessionManager.INSTANCE.addClientData(clientPacketData, session);
 					//send ack to client only if new data was added
 					sendAck(ipHeader, tcpheader, addedLength, session);
 				}
@@ -120,7 +120,7 @@ class SessionHandler {
 					sendFinAck(ipHeader, tcpheader, session);
 				}else if(session.isAckedToFin() && !tcpheader.isFIN()){
 					//the last ACK from client after FIN-ACK flag was sent
-					SessionManager.closeSession(destinationIP, destinationPort, sourceIP, sourcePort);
+					SessionManager.INSTANCE.closeSession(destinationIP, destinationPort, sourceIP, sourcePort);
 					Log.d(TAG,"got last ACK after FIN, session is now closed.");
 				}
 			}
@@ -139,15 +139,15 @@ class SessionHandler {
 			}
 
 			if(!session.isClientWindowFull() && !session.isAbortingConnection()){
-				SessionManager.keepSessionAlive(session);
+				SessionManager.INSTANCE.keepSessionAlive(session);
 			}
 		} else if(tcpheader.isFIN()){
 			//case client sent FIN without ACK
-			Session session = SessionManager.getSession(destinationIP, destinationPort, sourceIP, sourcePort);
+			Session session = SessionManager.INSTANCE.getSession(destinationIP, destinationPort, sourceIP, sourcePort);
 			if(session == null)
 				ackFinAck(ipHeader, tcpheader, null);
 			else
-				SessionManager.keepSessionAlive(session);
+				SessionManager.INSTANCE.keepSessionAlive(session);
 
 		} else if(tcpheader.isRST()){
 			resetConnection(ipHeader, tcpheader);
@@ -211,7 +211,7 @@ class SessionHandler {
 			packetData.addData(data);
 			if(session != null){
 				session.getSelectionKey().cancel();
-				SessionManager.closeSession(session);
+				SessionManager.INSTANCE.closeSession(session);
 				Log.d(TAG,"ACK to client's FIN and close session => "+PacketUtil.intToIPAddress(ip.getDestinationIP())+":"+tcp.getDestinationPort()
 						+"-"+PacketUtil.intToIPAddress(ip.getSourceIP())+":"+tcp.getSourcePort());
 			}
@@ -352,7 +352,7 @@ class SessionHandler {
 	 * @param tcp TCP
 	 */
 	private void resetConnection(IPv4Header ip, TCPHeader tcp){
-		Session session = SessionManager.getSession(ip.getDestinationIP(), tcp.getDestinationPort(),
+		Session session = SessionManager.INSTANCE.getSession(ip.getDestinationIP(), tcp.getDestinationPort(),
 				ip.getSourceIP(), tcp.getSourcePort());
 		if(session != null){
 			session.setAbortingConnection(true);
@@ -370,7 +370,7 @@ class SessionHandler {
 		
 		TCPHeader tcpheader = (TCPHeader) packet.getTransportHeader();
 		
-		Session session = SessionManager.createNewSession(ip.getDestinationIP(),
+		Session session = SessionManager.INSTANCE.createNewSession(ip.getDestinationIP(),
 				tcp.getDestinationPort(), ip.getSourceIP(), tcp.getSourcePort());
 		if(session == null)
 			return;

@@ -45,7 +45,7 @@ public class SocketNIODataService implements Runnable {
 	@Override
 	public void run() {
 		Log.d(TAG,"SocketNIODataService starting in background...");
-		selector = SessionManager.getSelector();
+		selector = SessionManager.INSTANCE.getSelector();
 		runTask();
 	}
 	/**
@@ -54,7 +54,7 @@ public class SocketNIODataService implements Runnable {
 	 */
 	public void setShutdown(boolean shutdown){
 		this.shutdown = shutdown;
-		SessionManager.getSelector().wakeup();
+		SessionManager.INSTANCE.getSelector().wakeup();
 	}
 
 	private void runTask(){
@@ -107,7 +107,7 @@ public class SocketNIODataService implements Runnable {
 			return;
 		}
 		DatagramChannel channel = (DatagramChannel) key.channel();
-		Session session = SessionManager.getSessionByChannel(channel);
+		Session session = SessionManager.INSTANCE.getSessionByChannel(channel);
 		if(session == null){
 			return;
 		}
@@ -137,7 +137,7 @@ public class SocketNIODataService implements Runnable {
 			return;
 		}
 		SocketChannel channel = (SocketChannel)key.channel();
-		Session session = SessionManager.getSessionByChannel(channel);
+		Session session = SessionManager.INSTANCE.getSessionByChannel(channel);
 		if(session == null){
 			return;
 		}

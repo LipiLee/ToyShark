@@ -44,7 +44,7 @@ class SocketDataReaderWorker implements Runnable {
 
 	@Override
 	public void run() {
-		Session session = SessionManager.getSessionByKey(sessionKey);
+		Session session = SessionManager.INSTANCE.getSessionByKey(sessionKey);
 		if(session == null) {
 			Log.e(TAG, "Session NOT FOUND");
 			return;
@@ -82,7 +82,7 @@ class SocketDataReaderWorker implements Runnable {
 					e.printStackTrace();
 				}
 			}
-			SessionManager.closeSession(session);
+			SessionManager.INSTANCE.closeSession(session);
 		} else {
 			session.setBusyread(false);
 		}

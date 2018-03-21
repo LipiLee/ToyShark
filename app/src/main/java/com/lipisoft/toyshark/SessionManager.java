@@ -20,12 +20,9 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
-import com.lipisoft.toyshark.network.ip.IPv4Header;
 import com.lipisoft.toyshark.socket.DataConst;
 import com.lipisoft.toyshark.socket.SocketNIODataService;
 import com.lipisoft.toyshark.socket.SocketProtector;
-import com.lipisoft.toyshark.transport.tcp.TCPHeader;
-import com.lipisoft.toyshark.transport.udp.UDPHeader;
 import com.lipisoft.toyshark.util.PacketUtil;
 
 import java.io.IOException;
@@ -48,16 +45,15 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author Borey Sao
  * Date: May 20, 2014
  */
-public class SessionManager {
-	private static final String TAG = "SessionManager";
-	private static final SessionManager instance = new SessionManager();
-	private static Map<String, Session> table;
-	private static SocketProtector protector;
-	private static Selector selector;
+public enum SessionManager {
+	INSTANCE;
 
-	private SessionManager() {
-		table = new ConcurrentHashMap<>();
-		protector = SocketProtector.getInstance();
+	private final String TAG = "SessionManager";
+	private final Map<String, Session> table = new ConcurrentHashMap<>();
+	private SocketProtector protector = SocketProtector.getInstance();
+	private Selector selector;
+
+	SessionManager() {
 		try {
 			selector = Selector.open();
 		} catch (IOException e) {
@@ -65,11 +61,7 @@ public class SessionManager {
 		}
 	}
 
-	public static SessionManager getInstance(){
-		return instance;
-	}
-
-	public static Selector getSelector(){
+	public Selector getSelector(){
 		return selector;
 	}
 
@@ -77,7 +69,7 @@ public class SessionManager {
 	 * keep java garbage collector from collecting a session
 	 * @param session Session
 	 */
-	public static void keepSessionAlive(Session session) {
+	public void keepSessionAlive(Session session) {
 		if(session != null){
 			String key = createKey(session.getDestIp(), session.getDestPort(),
 					session.getSourceIp(), session.getSourcePort());
@@ -100,23 +92,23 @@ public class SessionManager {
 	 * @param buffer Data
 	 * @param session Data
 	 */
-	public static int addClientData(ByteBuffer buffer, Session session) {
+	public int addClientData(ByteBuffer buffer, Session session) {
 		if (buffer.limit() <= buffer.position())
 			return 0;
-		byte[] payload = SessionManager.getRemainingBytes(buffer);
+		byte[] payload = getRemainingBytes(buffer);
 		//appending data to buffer
 		session.setSendingData(payload);
 		return payload.length;
 	}
 
-	public static Session getSession(int ip, int port, int srcIp, int srcPort) {
+	public Session getSession(int ip, int port, int srcIp, int srcPort) {
 		String key = createKey(ip, port, srcIp, srcPort);
 
 		return getSessionByKey(key);
 	}
 
 	@Nullable
-	public static Session getSessionByKey(String key) {
+	public Session getSessionByKey(String key) {
 		if(table.containsKey(key)){
 			return table.get(key);
 		}
@@ -124,7 +116,7 @@ public class SessionManager {
 		return null;
 	}
 
-	public static Session getSessionByChannel(AbstractSelectableChannel channel) {
+	public Session getSessionByChannel(AbstractSelectableChannel channel) {
 		Collection<Session> sessions = table.values();
 
 		for (Session session: sessions) {
@@ -156,7 +148,7 @@ public class SessionManager {
 	 * @param srcIp Source IP Address
 	 * @param srcPort Source Port
 	 */
-	public static void closeSession(int ip, int port, int srcIp, int srcPort){
+	public void closeSession(int ip, int port, int srcIp, int srcPort){
 		String key = createKey(ip, port, srcIp, srcPort);
 		Session session = table.remove(key);
 
@@ -173,8 +165,8 @@ public class SessionManager {
 		}
 	}
 
-	public static void closeSession(@NonNull Session session){
-		String key = SessionManager.createKey(session.getDestIp(),
+	public void closeSession(@NonNull Session session){
+		String key = createKey(session.getDestIp(),
 				session.getDestPort(), session.getSourceIp(),
 				session.getSourcePort());
 		table.remove(key);
@@ -191,7 +183,7 @@ public class SessionManager {
 	}
 
 	@Nullable
-	public static Session createNewUDPSession(int ip, int port, int srcIp, int srcPort){
+	public Session createNewUDPSession(int ip, int port, int srcIp, int srcPort){
 		String keys = createKey(ip, port, srcIp, srcPort);
 
 		if (table.containsKey(keys))
@@ -265,7 +257,7 @@ public class SessionManager {
 	}
 
 	@Nullable
-	public static Session createNewSession(int ip, int port, int srcIp, int srcPort){
+	public Session createNewSession(int ip, int port, int srcIp, int srcPort){
 		String key = createKey(ip, port, srcIp, srcPort);
 		if (table.containsKey(key)) {
 			Log.e(TAG, "Session was already created.");
