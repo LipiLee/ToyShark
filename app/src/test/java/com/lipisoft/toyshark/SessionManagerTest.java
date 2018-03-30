@@ -193,7 +193,7 @@ public class SessionManagerTest {
     }
 
     @Test
-    public void createKey() {
+    public void testCreateKey() {
         final String key = SessionManager.INSTANCE.createKey(1, 2, 3, 4);
         assertEquals(key, "0.0.0.3:4-0.0.0.1:2");
     }
