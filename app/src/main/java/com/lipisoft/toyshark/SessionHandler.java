@@ -93,7 +93,7 @@ class SessionHandler {
 			//set windows size and scale, set reply time in options
 			replySynAck(ipHeader,tcpheader);
 		} else if(tcpheader.isACK()) {
-			String key = SessionManager.createKey(destinationIP, destinationPort, sourceIP, sourcePort);
+			String key = SessionManager.INSTANCE.createKey(destinationIP, destinationPort, sourceIP, sourcePort);
 			Session session = SessionManager.INSTANCE.getSessionByKey(key);
 
 			if(session == null) {

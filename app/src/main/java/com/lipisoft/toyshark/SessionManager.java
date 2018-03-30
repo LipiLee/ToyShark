@@ -341,7 +341,7 @@ public enum SessionManager {
 	 * @param srcPort Source Port
 	 * @return String
 	 */
-	public static String createKey(int ip, int port, int srcIp, int srcPort){
+	public String createKey(int ip, int port, int srcIp, int srcPort){
 		return PacketUtil.intToIPAddress(srcIp) + ":" + srcPort + "-" +
 				PacketUtil.intToIPAddress(ip) + ":" + port;
 	}
