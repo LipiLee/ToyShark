@@ -104,6 +104,9 @@ class SessionHandler {
 				return;
 			}
 
+			session.setLastIpHeader(ipHeader);
+			session.setLastTcpHeader(tcpheader);
+
 			//any data from client?
 			if(dataLength > 0) {
 				//accumulate data from client
@@ -258,8 +261,6 @@ class SessionHandler {
 	}
 	private void pushDataToDestination(Session session, IPv4Header ip, TCPHeader tcp){
 		session.setDataForSendingReady(true);
-		session.setLastIpHeader(ip);
-		session.setLastTcpHeader(tcp);
 		session.setTimestampReplyto(tcp.getTimeStampSender());
 		Date dt = new Date();
 		int timestampSender = (int)dt.getTime();
