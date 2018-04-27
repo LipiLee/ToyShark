@@ -168,7 +168,11 @@ class SessionHandler {
 	 * @param stream ByteBuffer to be read
 	 */
 	void handlePacket(@NonNull ByteBuffer stream) throws PacketHeaderException {
-		packetData.addData(stream.array());
+		final byte[] rawPacket = new byte[stream.limit()];
+		stream.get(rawPacket, 0, stream.limit());
+		packetData.addData(rawPacket);
+		stream.rewind();
+
 		final IPv4Header ipHeader = IPPacketFactory.createIPv4Header(stream);
 
 		final ITransportHeader transportHeader;
