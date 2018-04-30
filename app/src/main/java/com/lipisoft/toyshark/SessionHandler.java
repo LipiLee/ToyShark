@@ -97,9 +97,13 @@ class SessionHandler {
 			Session session = SessionManager.INSTANCE.getSessionByKey(key);
 
 			if(session == null) {
-				Log.e(TAG,"**** ==> Session not found: " + key);
-				if(!tcpheader.isRST() && !tcpheader.isFIN()){
+				if (tcpheader.isFIN()) {
+					sendLastAck(ipHeader, tcpheader);
+				} else if (!tcpheader.isRST()) {
 					sendRstPacket(ipHeader, tcpheader, dataLength);
+				}
+				else {
+					Log.e(TAG,"**** ==> Session not found: " + key);
 				}
 				return;
 			}
@@ -208,6 +212,20 @@ class SessionHandler {
 			Log.e(TAG,"failed to send RST packet: " + e.getMessage());
 		}
 	}
+
+	private void sendLastAck(IPv4Header ip, TCPHeader tcp){
+		byte[] data = TCPPacketFactory.createResponseAckData(ip, tcp, tcp.getSequenceNumber()+1);
+		try {
+			writer.write(data);
+			packetData.addData(data);
+			Log.d(TAG,"Sent RST Packet to client with dest => " +
+					PacketUtil.intToIPAddress(ip.getDestinationIP()) + ":" +
+					tcp.getDestinationPort());
+		} catch (IOException e) {
+			Log.e(TAG,"failed to send RST packet: " + e.getMessage());
+		}
+	}
+
 	private void ackFinAck(IPv4Header ip, TCPHeader tcp, Session session){
 		//TODO: check if client send only FIN without ACK
 		long ack = tcp.getSequenceNumber() + 1;
@@ -330,14 +348,6 @@ class SessionHandler {
 			
 			if(tcpHeader.getWindowSize() > 0){
 				session.setSendWindowSizeAndScale(tcpHeader.getWindowSize(), session.getSendWindowScale());
-			}
-			long byteReceived = tcpHeader.getAckNumber() - session.getSendUnack();
-			if(byteReceived > 0){
-				session.decreaseAmountSentSinceLastAck(byteReceived);
-			}
-			if(session.isClientWindowFull()){
-				Log.d(TAG,"window: "+session.getSendWindow()+" is full? "+session.isClientWindowFull() + " for "+PacketUtil.intToIPAddress(ipHeader.getDestinationIP())
-					+":"+tcpHeader.getDestinationPort()+"-"+PacketUtil.intToIPAddress(ipHeader.getSourceIP())+":"+tcpHeader.getSourcePort());
 			}
 			session.setSendUnack(tcpHeader.getAckNumber());
 			session.setRecSequence(tcpHeader.getSequenceNumber());

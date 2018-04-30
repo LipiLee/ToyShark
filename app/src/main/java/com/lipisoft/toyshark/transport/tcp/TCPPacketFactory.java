@@ -128,7 +128,7 @@ public class TCPPacketFactory {
 		ip.setIdentification(PacketUtil.getPacketId());
 		
 		tcp.setIsRST(false);
-		tcp.setIsACK(false);
+		tcp.setIsACK(true);
 		tcp.setIsSYN(false);
 		tcp.setIsPSH(false);
 		tcp.setIsCWR(false);
@@ -247,6 +247,7 @@ public class TCPPacketFactory {
 		tcp.setIsACK(true);
 		tcp.setIsSYN(false);
 		tcp.setIsPSH(false);
+		tcp.setIsFIN(false);
 		
 		//set response timestamps in options fields
 		tcp.setTimeStampReplyTo(tcp.getTimeStampSender());
