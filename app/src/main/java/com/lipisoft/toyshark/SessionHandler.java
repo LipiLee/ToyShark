@@ -31,7 +31,6 @@ import com.lipisoft.toyshark.transport.udp.UDPHeader;
 import com.lipisoft.toyshark.transport.udp.UDPPacketFactory;
 import com.lipisoft.toyshark.util.PacketUtil;
 
-import android.os.Message;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
@@ -121,7 +120,7 @@ class SessionHandler {
 				}
 			} else {
 				//an ack from client for previously sent data
-				acceptAck(ipHeader,tcpheader, session);
+				acceptAck(tcpheader, session);
 
 				if(session.isClosingConnection()){
 					sendFinAck(ipHeader, tcpheader, session);
@@ -135,7 +134,7 @@ class SessionHandler {
 			if(tcpheader.isPSH()){
 				//push data to destination here. Background thread will receive data and fill session's buffer.
 				//Background thread will send packet to client
-				pushDataToDestination(session, ipHeader, tcpheader);
+				pushDataToDestination(session, tcpheader);
 			} else if(tcpheader.isFIN()){
 				//fin from vpn client is the last packet
 				//ack it
@@ -227,7 +226,6 @@ class SessionHandler {
 	}
 
 	private void ackFinAck(IPv4Header ip, TCPHeader tcp, Session session){
-		//TODO: check if client send only FIN without ACK
 		long ack = tcp.getSequenceNumber() + 1;
 		long seq = tcp.getAckNumber();
 		byte[] data = TCPPacketFactory.createFinAckData(ip, tcp, ack, seq, true, true);
@@ -281,13 +279,13 @@ class SessionHandler {
 		//avoid re-sending it, from here client should take care the rest
 		session.setClosingConnection(false);
 	}
-	private void pushDataToDestination(Session session, IPv4Header ip, TCPHeader tcp){
+
+	private void pushDataToDestination(Session session, TCPHeader tcp){
 		session.setDataForSendingReady(true);
 		session.setTimestampReplyto(tcp.getTimeStampSender());
-		Date dt = new Date();
-		int timestampSender = (int)dt.getTime();
-		session.setTimestampSender(timestampSender);
-		Log.d(TAG,"set data ready for sending to dest, bg will do it. data size: "+session.getSendingDataSize());
+		session.setTimestampSender((int)new Date().getTime());
+		Log.d(TAG,"set data ready for sending to dest, bg will do it. data size: "
+                + session.getSendingDataSize());
 	}
 	
 	/**
@@ -305,37 +303,17 @@ class SessionHandler {
 		try {
 			writer.write(data);
 			packetData.addData(data);
-			/* for debugging purpose
-			Log.d(TAG,"&&&&&&&&&&&&& ACK packet data to vpn client &&&&&&&&&&&&&&");
-			IPv4Header vpnip = null;
-			try {
-				vpnip = factory.createIPv4Header(data, 0);
-			} catch (PacketHeaderException e) {
-				e.printStackTrace();
-			}
-			TCPHeader vpntcp = null;
-			try {
-				vpntcp = factory.createTCPHeader(data, vpnip.getIPHeaderLength());
-			} catch (PacketHeaderException e) {
-				e.printStackTrace();
-			}
-			if(vpnip != null && vpntcp != null){
-				String sout = PacketUtil.getOutput(vpnip, vpntcp, data);
-				Log.d(TAG,sout);
-			}
-			Log.d(TAG,"&&&&&&&&&&&& finished sending ACK packet to vpn client &&&&&&&&&&&&&&&&");
-			*/
 		} catch (IOException e) {
-			Log.e(TAG,"Failed to send ACK packet: "+e.getMessage());
+			Log.e(TAG,"Failed to send ACK packet: " + e.getMessage());
 		}
 	}
+
 	/**
 	 * acknowledge a packet and adjust the receiving window to avoid congestion.
-	 * @param ipHeader IP Header
 	 * @param tcpHeader TCP Header
 	 * @param session Session
 	 */
-	private void acceptAck(IPv4Header ipHeader, TCPHeader tcpHeader, Session session){
+	private void acceptAck(TCPHeader tcpHeader, Session session){
 		boolean isCorrupted = PacketUtil.isPacketCorrupted(tcpHeader);
 		session.setPacketCorrupted(isCorrupted);
 		if(isCorrupted){
@@ -352,10 +330,8 @@ class SessionHandler {
 			session.setSendUnack(tcpHeader.getAckNumber());
 			session.setRecSequence(tcpHeader.getSequenceNumber());
 			session.setTimestampReplyto(tcpHeader.getTimeStampSender());
-			Date dt = new Date();
-			int timestampSender = (int)dt.getTime();
-			session.setTimestampSender(timestampSender);
-		}else{
+			session.setTimestampSender((int) new Date().getTime());
+		} else {
 			Log.d(TAG,"Not Accepting ack# "+tcpHeader.getAckNumber() +" , it should be: "+session.getSendNext());
 			Log.d(TAG,"Prev sendUnack: "+session.getSendUnack());
 			session.setAcked(false);
