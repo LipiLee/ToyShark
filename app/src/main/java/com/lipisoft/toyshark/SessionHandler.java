@@ -218,11 +218,11 @@ class SessionHandler {
 		try {
 			writer.write(data);
 			packetData.addData(data);
-			Log.d(TAG,"Sent RST Packet to client with dest => " +
+			Log.d(TAG,"Sent last ACK Packet to client with dest => " +
 					PacketUtil.intToIPAddress(ip.getDestinationIP()) + ":" +
 					tcp.getDestinationPort());
 		} catch (IOException e) {
-			Log.e(TAG,"failed to send RST packet: " + e.getMessage());
+			Log.e(TAG,"failed to send last ACK packet: " + e.getMessage());
 		}
 	}
 
