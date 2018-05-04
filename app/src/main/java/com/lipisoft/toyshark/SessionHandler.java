@@ -117,6 +117,8 @@ class SessionHandler {
 					int addedLength = SessionManager.INSTANCE.addClientData(clientPacketData, session);
 					//send ack to client only if new data was added
 					sendAck(ipHeader, tcpheader, addedLength, session);
+				} else {
+					sendAckForDisorder(ipHeader, tcpheader, dataLength);
 				}
 			} else {
 				//an ack from client for previously sent data
@@ -283,7 +285,8 @@ class SessionHandler {
 	private void pushDataToDestination(Session session, TCPHeader tcp){
 		session.setDataForSendingReady(true);
 		session.setTimestampReplyto(tcp.getTimeStampSender());
-		session.setTimestampSender((int)new Date().getTime());
+		session.setTimestampSender((int)System.currentTimeMillis());
+
 		Log.d(TAG,"set data ready for sending to dest, bg will do it. data size: "
                 + session.getSendingDataSize());
 	}
@@ -300,6 +303,19 @@ class SessionHandler {
 		Log.d(TAG,"sent ack, ack# "+session.getRecSequence()+" + "+acceptedDataLength+" = "+acknumber);
 		session.setRecSequence(acknumber);
 		byte[] data = TCPPacketFactory.createResponseAckData(ipheader, tcpheader, acknumber);
+		try {
+			writer.write(data);
+			packetData.addData(data);
+		} catch (IOException e) {
+			Log.e(TAG,"Failed to send ACK packet: " + e.getMessage());
+		}
+	}
+
+	private void sendAckForDisorder(IPv4Header ipHeader, TCPHeader tcpheader, int acceptedDataLength) {
+		long ackNumber = tcpheader.getSequenceNumber() + acceptedDataLength;
+		Log.d(TAG,"sent ack, ack# " + tcpheader.getSequenceNumber() +
+				" + " + acceptedDataLength + " = " + ackNumber);
+		byte[] data = TCPPacketFactory.createResponseAckData(ipHeader, tcpheader, ackNumber);
 		try {
 			writer.write(data);
 			packetData.addData(data);
@@ -330,7 +346,7 @@ class SessionHandler {
 			session.setSendUnack(tcpHeader.getAckNumber());
 			session.setRecSequence(tcpHeader.getSequenceNumber());
 			session.setTimestampReplyto(tcpHeader.getTimeStampSender());
-			session.setTimestampSender((int) new Date().getTime());
+			session.setTimestampSender((int) System.currentTimeMillis());
 		} else {
 			Log.d(TAG,"Not Accepting ack# "+tcpHeader.getAckNumber() +" , it should be: "+session.getSendNext());
 			Log.d(TAG,"Prev sendUnack: "+session.getSendUnack());
