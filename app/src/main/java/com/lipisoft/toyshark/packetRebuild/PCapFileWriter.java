@@ -17,7 +17,7 @@ import java.io.OutputStream;
  */
 public class PCapFileWriter implements CaptureFileWriter
 {
-	private static final int MAX_PACKET_SIZE = 65356;
+	public static final int MAX_PACKET_SIZE = 65356;
 
 	public static final long DEFAULT_LIMIT = 100000000000L;
 
@@ -249,7 +249,7 @@ public class PCapFileWriter implements CaptureFileWriter
 		}
 
 		hder.setTimeValMsec32Uint((time / 1000) % 1000000);
-		hder.setTimeValSec32Uint(time / 1000000000l);
+		hder.setTimeValSec32Uint(time / 1000000000L);
 
 		// updated to use the real packet length
 		hder.setPktlenUint32(length + ETHERNET_HDR_LEN);

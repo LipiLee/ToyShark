@@ -8,6 +8,7 @@ import com.lipisoft.toyshark.Session;
 import com.lipisoft.toyshark.SessionManager;
 import com.lipisoft.toyshark.network.ip.IPPacketFactory;
 import com.lipisoft.toyshark.network.ip.IPv4Header;
+import com.lipisoft.toyshark.packetRebuild.PCapFileWriter;
 import com.lipisoft.toyshark.transport.tcp.PacketHeaderException;
 import com.lipisoft.toyshark.transport.tcp.TCPHeader;
 import com.lipisoft.toyshark.transport.tcp.TCPPacketFactory;
@@ -63,7 +64,7 @@ class SocketDataReaderWorker implements Runnable {
 		if(session.isAbortingConnection()) {
 			Log.d(TAG,"removing aborted connection -> "+ sessionKey);
 			session.getSelectionKey().cancel();
-			if(channel instanceof SocketChannel){
+			if (channel instanceof SocketChannel){
 				try {
 					SocketChannel socketChannel = (SocketChannel) channel;
 					if (socketChannel.isConnected()) {
@@ -72,7 +73,7 @@ class SocketDataReaderWorker implements Runnable {
 				} catch (IOException e) {
 					Log.e(TAG, e.toString());
 				}
-			}else if(channel instanceof DatagramChannel){
+			} else {
 				try {
 					DatagramChannel datagramChannel = (DatagramChannel) channel;
 					if (datagramChannel.isConnected()) {
@@ -152,22 +153,22 @@ class SocketDataReaderWorker implements Runnable {
 	/**
 	 * create packet data and send it to VPN client
 	 * @param session Session
-	 * @return boolean
 	 */
-	private boolean pushDataToClient(@NonNull Session session){
+	private void pushDataToClient(@NonNull Session session){
 		if(!session.hasReceivedData()){
 			//no data to send
 			Log.d(TAG,"no data for vpn client");
-			return false;
 		}
-		
+
 		IPv4Header ipHeader = session.getLastIpHeader();
 		TCPHeader tcpheader = session.getLastTcpHeader();
 		// TODO What does 60 mean?
 		int max = session.getMaxSegmentSize() - 60;
-		
-		if(max < 1){
+
+		if(max < 1) {
 			max = 1024;
+		} else if (max > PCapFileWriter.MAX_PACKET_SIZE - 60) {
+			max = PCapFileWriter.MAX_PACKET_SIZE - 60;
 		}
 		byte[] packetBody = session.getReceivedData(max);
 		if(packetBody != null && packetBody.length > 0) {
@@ -178,7 +179,7 @@ class SocketDataReaderWorker implements Runnable {
 			//we need this data later on for retransmission
 			session.setUnackData(packetBody);
 			session.setResendPacketCounter(0);
-			
+
 			byte[] data = TCPPacketFactory.createResponsePacketData(ipHeader,
 					tcpheader, packetBody, session.hasReceivedLastSegment(),
 					session.getRecSequence(), unAck,
@@ -186,48 +187,10 @@ class SocketDataReaderWorker implements Runnable {
 			try {
 				writer.write(data);
 				pData.addData(data);
-				//Log.d(TAG,"finished sending "+data.length+" to vpn client: "+PacketUtil.intToIPAddress(session.getDestIp())+":"+session.getDestPort()+"-"+
-				//		PacketUtil.intToIPAddress(session.getSourceIp())+":"+session.getSourcePort());
-				
-				/* for debugging purpose 
-				Log.d(TAG,"========> BG: packet data to vpn client++++++++");
-				IPv4Header vpnIp = null;
-				try {
-					vpnIp = factory.createIPv4Header(data, 0);
-				} catch (PacketHeaderException e) {
-					e.printStackTrace();
-				}
-				TCPHeader vpnTcp = null;
-				try {
-					vpnTcp = factory.createTCPHeader(data, vpnIp.getIPHeaderLength());
-				} catch (PacketHeaderException e) {
-					e.printStackTrace();
-				}
-				if(vpnIp != null && vpnTcp != null){
-					String out = PacketUtil.getOutput(vpnIp, vpnTcp, data);
-					Log.d(TAG, out);
-				}
-				
-				Log.d(TAG,"=======> BG: finished sending packet to vpn client ========");
-				if(vpnTcp != null){
-					int offset = vpnTcp.getTCPHeaderLength() + vpnIp.getIPHeaderLength();
-					int bodySize = data.length - offset;
-					byte[] clientData = new byte[bodySize];
-	        		System.arraycopy(data, offset, clientData, 0, bodySize);
-	        		Log.d(TAG,"444444 Packet Data sent to Client 444444");
-	        		String vpn = new String(clientData);
-	        		Log.d(TAG,vpn);
-	        		Log.d(TAG,"444444 End Data to Client 4444444");
-				}
-				*/
-				
 			} catch (IOException e) {
 				Log.e(TAG,"Failed to send ACK + Data packet: " + e.getMessage());
-				return false;
 			}
-			return true;
 		}
-		return false;
 	}
 	private void sendFin(Session session){
 		final IPv4Header ipHeader = session.getLastIpHeader();
@@ -238,28 +201,6 @@ class SocketDataReaderWorker implements Runnable {
 		try {
 			writer.write(data);
 			pData.addData(data);
-			/* for debugging purpose 
-			Log.d(TAG,"========> BG: FIN packet data to vpn client++++++++");
-			IPv4Header vpnIp = null;
-			try {
-				vpnIp = factory.createIPv4Header(data, 0);
-			} catch (PacketHeaderException e) {
-				e.printStackTrace();
-			}
-			TCPHeader vpnTcp = null;
-			try {
-				vpnTcp = factory.createTCPHeader(data, vpnIp.getIPHeaderLength());
-			} catch (PacketHeaderException e) {
-				e.printStackTrace();
-			}
-			if(vpnIp != null && vpnTcp != null){
-				String out = PacketUtil.getOutput(vpnIp, vpnTcp, data);
-				Log.d(TAG,out);
-			}
-			
-			Log.d(TAG,"=======> BG: finished sending FIN packet to vpn client ========");
-			*/
-			
 		} catch (IOException e) {
 			Log.e(TAG,"Failed to send FIN packet: " + e.getMessage());
 		}
