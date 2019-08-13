@@ -17,8 +17,8 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.channels.spi.AbstractSelectableChannel;
-import java.util.Arrays;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -26,7 +26,7 @@ import static org.junit.Assert.assertNull;
 @RunWith(RobolectricTestRunner.class)
 public class SessionManagerTest {
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         IProtectSocket protectSocket = new IProtectSocket() {
             @Override
             public void protectSocket(Socket socket) {
@@ -47,7 +47,7 @@ public class SessionManagerTest {
     }
 
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
     }
 
     @Test
@@ -79,7 +79,7 @@ public class SessionManagerTest {
         final ByteBuffer buffer = ByteBuffer.wrap(byteBuffer);
         SessionManager.INSTANCE.addClientData(buffer, tcpSession);
         final byte[] result = tcpSession.getSendingData();
-        assertEquals(true, Arrays.equals(byteBuffer, result));
+        assertArrayEquals(byteBuffer, result);
 
         // Release prevents other unit tests from being interrupted.
         SessionManager.INSTANCE.closeSession(tcpSession);
