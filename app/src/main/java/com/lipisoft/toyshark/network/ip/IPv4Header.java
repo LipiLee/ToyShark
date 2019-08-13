@@ -16,7 +16,7 @@
 
 package com.lipisoft.toyshark.network.ip;
 
-import android.support.annotation.Nullable;
+import androidx.annotation.Nullable;
 
 /**
  * Data structure for IPv4 header as defined in RFC 791.

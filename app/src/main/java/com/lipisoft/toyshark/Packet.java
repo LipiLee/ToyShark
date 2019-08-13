@@ -16,16 +16,13 @@
 
 package com.lipisoft.toyshark;
 
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
-import com.lipisoft.toyshark.application.IApplication;
 import com.lipisoft.toyshark.network.ip.IPv4Header;
 import com.lipisoft.toyshark.transport.ITransportHeader;
 import com.lipisoft.toyshark.transport.tcp.TCPHeader;
 import com.lipisoft.toyshark.transport.udp.UDPHeader;
-
-import java.nio.ByteBuffer;
 
 /**
  * Data structure that encapsulate both IPv4Header and TCPHeader

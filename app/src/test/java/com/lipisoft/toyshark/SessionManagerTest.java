@@ -1,6 +1,6 @@
 package com.lipisoft.toyshark;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.lipisoft.toyshark.socket.IProtectSocket;
 import com.lipisoft.toyshark.socket.SocketProtector;

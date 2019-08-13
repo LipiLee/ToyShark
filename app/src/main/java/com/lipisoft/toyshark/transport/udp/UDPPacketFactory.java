@@ -1,9 +1,7 @@
 package com.lipisoft.toyshark.transport.udp;
 
-import android.os.Message;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
-import com.lipisoft.toyshark.MainActivity;
 import com.lipisoft.toyshark.Packet;
 import com.lipisoft.toyshark.PacketManager;
 import com.lipisoft.toyshark.network.ip.IPPacketFactory;

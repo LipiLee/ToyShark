@@ -15,7 +15,7 @@
 */
 package com.lipisoft.toyshark.transport.tcp;
 
-import android.support.annotation.Nullable;
+import androidx.annotation.Nullable;
 
 import com.lipisoft.toyshark.transport.ITransportHeader;
 /**

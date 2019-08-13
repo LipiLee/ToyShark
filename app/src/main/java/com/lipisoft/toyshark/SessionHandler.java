@@ -18,7 +18,6 @@ package com.lipisoft.toyshark;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Date;
 
 import com.lipisoft.toyshark.network.ip.IPPacketFactory;
 import com.lipisoft.toyshark.network.ip.IPv4Header;
@@ -31,7 +30,7 @@ import com.lipisoft.toyshark.transport.udp.UDPHeader;
 import com.lipisoft.toyshark.transport.udp.UDPPacketFactory;
 import com.lipisoft.toyshark.util.PacketUtil;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 import android.util.Log;
 
 /**

@@ -1,6 +1,6 @@
 package com.lipisoft.toyshark.socket;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 import android.util.Log;
 
 import com.lipisoft.toyshark.IClientPacketWriter;

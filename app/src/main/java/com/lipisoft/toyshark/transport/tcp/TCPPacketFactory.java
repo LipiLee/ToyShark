@@ -16,19 +16,16 @@
 
 package com.lipisoft.toyshark.transport.tcp;
 
-import android.os.Message;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import android.util.Log;
 
-import com.lipisoft.toyshark.MainActivity;
 import com.lipisoft.toyshark.Packet;
 import com.lipisoft.toyshark.PacketManager;
 import com.lipisoft.toyshark.network.ip.IPPacketFactory;
 import com.lipisoft.toyshark.network.ip.IPv4Header;
 import com.lipisoft.toyshark.util.PacketUtil;
 
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Date;
