@@ -77,16 +77,6 @@ public enum SessionManager {
 		}
 	}
 
-	private static byte[] getRemainingBytes(ByteBuffer buffer) {
-		int length = buffer.limit() - buffer.position();
-		byte[] remainingBytes = new byte[length];
-
-		for (int i = 0; i < length; i++)
-			remainingBytes[i] = buffer.get();
-
-		return remainingBytes;
-	}
-
 	/**
 	 * add data from client which will be sending to the destination server later one when receiving PSH flag.
 	 * @param buffer Data
@@ -95,10 +85,8 @@ public enum SessionManager {
 	public int addClientData(ByteBuffer buffer, Session session) {
 		if (buffer.limit() <= buffer.position())
 			return 0;
-		byte[] payload = getRemainingBytes(buffer);
 		//appending data to buffer
-		session.setSendingData(payload);
-		return payload.length;
+		return session.setSendingData(buffer);
 	}
 
 	public Session getSession(int ip, int port, int srcIp, int srcPort) {

@@ -24,6 +24,7 @@ import com.lipisoft.toyshark.transport.udp.UDPHeader;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.spi.AbstractSelectableChannel;
 
@@ -207,14 +208,10 @@ public class Session {
 	 * @param data Data to be sent
 	 * @return boolean Success or not
 	 */
-	synchronized boolean setSendingData(byte[] data){
-		try {
-			sendingStream.write(data);
-		} catch (IOException e) {
-			Log.e(TAG, e.toString());
-			return false;
-		}
-		return true;
+	synchronized int setSendingData(ByteBuffer data) {
+		final int remaining = data.remaining();
+		sendingStream.write(data.array(), data.position(), data.remaining());
+		return remaining;
 	}
 
 	int getSendingDataSize(){
