@@ -62,6 +62,10 @@ public class UDPPacketFactory {
 		ipHeader.setTotalLength(totalLength);
 		buffer = new byte[totalLength];
 		byte[] ipData = IPPacketFactory.createIPv4HeaderData(ipHeader);
+
+		// clear IP checksum
+		ipData[10] = ipData[11] = 0;
+
 		//calculate checksum for IP header
 		byte[] ipChecksum = PacketUtil.calculateChecksum(ipData, 0, ipData.length);
 		//write result of checksum back to buffer
